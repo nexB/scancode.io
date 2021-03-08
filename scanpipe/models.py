@@ -118,7 +118,7 @@ class AbstractTaskFieldsModel(models.Model):
         return AsyncResult(str(self.task_id)).state
 
     @property
-    def execution_time(self):
+    def execution_time(self) -> int:
         if self.task_end_date and self.task_start_date:
             total_seconds = (self.task_end_date - self.task_start_date).total_seconds()
             return int(total_seconds)
@@ -280,7 +280,7 @@ class Project(UUIDPKModel, models.Model):
         return [str(path.relative_to(directory)) for path in directory.glob("*")]
 
     @property
-    def input_root(self):
+    def input_root(self) -> list:
         """
         Return the list of all files and directories of the input/ directory.
         Only the first level children are listed.
@@ -288,7 +288,7 @@ class Project(UUIDPKModel, models.Model):
         return self.get_root_content(self.input_path)
 
     @property
-    def output_root(self):
+    def output_root(self) -> list:
         """
         Return the list of all files and directories of the output/ directory.
         Only the first level children are listed.

@@ -133,11 +133,11 @@ class ProjectSerializer(
             "discovered_package_summary",
         ]
 
-    def get_codebase_resources_summary(self, project):
+    def get_codebase_resources_summary(self, project) -> dict:
         queryset = project.codebaseresources.all()
         return count_group_by(queryset, "status")
 
-    def get_discovered_package_summary(self, project):
+    def get_discovered_package_summary(self, project) -> dict:
         base_qs = project.discoveredpackages
         return {
             "total": base_qs.count(),

@@ -199,7 +199,7 @@ class Scan(AbstractTaskFieldsModel, models.Model):
         return deleted
 
     @property
-    def status(self):
+    def status(self) -> str:
         if self.task_exitcode and self.task_exitcode > 0:
             if "Scanning done." in self.task_output:
                 return "completed with issues"
