@@ -903,12 +903,16 @@ class CodebaseResource(
         Return a QuerySet of direct children CodebaseResource objects using a
         Database query on this CodebaseResource `path`.
 
+        Paths are returned in lower-cased sorted path order to reflect the
+        behavior of `commoncode.resource.Resource.children()`
+        https://github.com/nexB/commoncode/blob/76a03d9c1cd2a582dcec4351c768c3ef646e1b31/src/commoncode/resource.py#L1199
+
         `codebase` is not used in this context but required for compatibility
         with the commoncode.resource.VirtualCodebase class API.
         """
         exactly_one_sub_directory = "[^/]+$"
         children_regex = rf"^{self.path}/{exactly_one_sub_directory}"
-        return self.descendants().filter(path__regex=children_regex)
+        return self.descendants().filter(path__regex=children_regex).order_by(Lower('path'))
 
     def walk(self, topdown=True):
         """
@@ -916,11 +920,8 @@ class CodebaseResource(
 
         Walk the tree top-down, depth-first if `topdown` is True, otherwise walk
         bottom-up.
-
-        Each level is sorted by lowercased path, to reflect the walk behavior of
-        `commoncode.resource.Resource.walk()`
         """
-        for child in self.children().order_by(Lower('path')):
+        for child in self.children():
             if topdown:
                 yield child
             for subchild in child.walk(topdown=topdown):
