@@ -912,7 +912,11 @@ class CodebaseResource(
         """
         exactly_one_sub_directory = "[^/]+$"
         children_regex = rf"^{self.path}/{exactly_one_sub_directory}"
-        return self.descendants().filter(path__regex=children_regex).order_by(Lower('path'))
+        return (
+            self.descendants()
+            .filter(path__regex=children_regex)
+            .order_by(Lower("path"))
+        )
 
     def walk(self, topdown=True):
         """

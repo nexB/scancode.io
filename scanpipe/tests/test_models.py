@@ -636,11 +636,15 @@ class ScanPipeModelsTest(TestCase):
         topdown_paths = list(r.path for r in asgiref_root.walk(topdown=True))
         # We walk from the root Resource of `asgiref_vc` to make it comparable
         # to how we are walking the children of `asgiref_root`
-        expected_topdown_paths = list(r.path for r in asgiref_vc_root.walk(asgiref_vc, topdown=True))
+        expected_topdown_paths = list(
+            r.path for r in asgiref_vc_root.walk(asgiref_vc, topdown=True)
+        )
         self.assertEqual(expected_topdown_paths, topdown_paths)
 
         bottom_up_paths = list(r.path for r in asgiref_root.walk(topdown=False))
-        expected_bottom_up_paths = list(r.path for r in asgiref_vc_root.walk(asgiref_vc, topdown=False))
+        expected_bottom_up_paths = list(
+            r.path for r in asgiref_vc_root.walk(asgiref_vc, topdown=False)
+        )
         self.assertEqual(expected_bottom_up_paths, bottom_up_paths)
 
     def test_scanpipe_codebase_resource_create_and_add_package(self):
