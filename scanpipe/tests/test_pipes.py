@@ -29,6 +29,8 @@ from django.core.management import call_command
 from django.test import TestCase
 from django.test import TransactionTestCase
 
+from commoncode.resource import VirtualCodebase
+
 from scanpipe.models import CodebaseResource
 from scanpipe.models import DiscoveredPackage
 from scanpipe.models import Project
@@ -384,6 +386,23 @@ class ScanPipePipesTest(TestCase):
             expected = json.loads(f.read())
 
         self.assertEqual(expected, tree)
+
+    def test_scanpipe_pipes_codebase_project_codebase_class_walk(self):
+        fixtures = self.data_location / "asgiref-3.3.0_fixtures.json"
+        call_command("loaddata", fixtures, **{"verbosity": 0})
+
+        project = Project.objects.get(name="asgiref")
+        project_codebase = codebase.ProjectCodebase(project)
+        asgiref_scan = self.data_location / "asgiref-3.3.0_scan.json"
+        asgiref_vc = VirtualCodebase(location=asgiref_scan)
+
+        topdown_paths = list(r.path for r in project_codebase.walk(topdown=True))
+        expected_topdown_paths = list(r.path for r in asgiref_vc.walk(topdown=True))
+        self.assertEqual(expected_topdown_paths, topdown_paths)
+
+        bottom_up_paths = list(r.path for r in project_codebase.walk(topdown=False))
+        expected_bottom_up_paths = list(r.path for r in asgiref_vc.walk(topdown=False))
+        self.assertEqual(expected_bottom_up_paths, bottom_up_paths)
 
     @mock.patch("requests.get")
     def test_scanpipe_pipes_fetch_download(self, mock_get):

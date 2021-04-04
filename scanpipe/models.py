@@ -33,6 +33,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.db import transaction
 from django.db.models import Q
+from django.db.models.functions import Lower
 from django.forms import model_to_dict
 from django.urls import reverse
 from django.utils import timezone
@@ -908,6 +909,24 @@ class CodebaseResource(
         exactly_one_sub_directory = "[^/]+$"
         children_regex = rf"^{self.path}/{exactly_one_sub_directory}"
         return self.descendants().filter(path__regex=children_regex)
+
+    def walk(self, topdown=True):
+        """
+        Yield all descendant Resources of this Resource. Does not include self.
+
+        Walk the tree top-down, depth-first if `topdown` is True, otherwise walk
+        bottom-up.
+
+        Each level is sorted by lowercased path, to reflect the walk behavior of
+        `commoncode.resource.Resource.walk()`
+        """
+        for child in self.children().order_by(Lower('path')):
+            if topdown:
+                yield child
+            for subchild in child.walk(topdown=topdown):
+                yield subchild
+            if not topdown:
+                yield child
 
     def get_absolute_url(self):
         return reverse("resource_detail", args=[self.project_id, self.pk])
