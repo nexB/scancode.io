@@ -925,7 +925,7 @@ class CodebaseResource(
         Walk the tree top-down, depth-first if `topdown` is True, otherwise walk
         bottom-up.
         """
-        for child in self.children():
+        for child in self.children().iterator():
             if topdown:
                 yield child
             for subchild in child.walk(topdown=topdown):
