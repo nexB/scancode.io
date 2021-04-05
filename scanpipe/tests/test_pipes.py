@@ -358,7 +358,8 @@ class ScanPipePipesTest(TestCase):
             project_codebase.root
 
         self.assertEqual([], list(project_codebase.resources))
-        self.assertEqual([], list(project_codebase.walk()))
+        with self.assertRaises(AttributeError):
+            list(project_codebase.walk())
         with self.assertRaises(AttributeError):
             project_codebase.get_tree()
 
