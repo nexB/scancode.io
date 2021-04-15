@@ -76,8 +76,14 @@ class ProjectCodebase:
     def resources(self):
         return self.project.codebaseresources.all()
 
-    def walk(self):
-        yield from self.resources.iterator()
+    def walk(self, topdown=True):
+        root = self.root
+        if topdown:
+            yield root
+        for resource in root.walk(topdown=topdown):
+            yield resource
+        if not topdown:
+            yield root
 
     def get_tree(self):
         return get_tree(self.root, fields=["name", "path"])
