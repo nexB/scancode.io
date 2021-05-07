@@ -224,6 +224,7 @@ CRISPY_TEMPLATE_PACK = "bootstrap3"
 
 # Celery
 
+CELERY_BROKER_TRANSPORT_OPTIONS = {"socket_timeout": 5, "max_retries": 1}
 CELERY_BROKER_URL = env.str("CELERY_BROKER_URL", default="redis://")
 CELERY_RESULT_BACKEND = env.str("CELERY_RESULT_BACKEND", default="redis://")
 CELERY_TRACK_STARTED = env.bool("CELERY_TRACK_STARTED", default=True)
