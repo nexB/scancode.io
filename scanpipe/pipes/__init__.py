@@ -239,25 +239,55 @@ def update_or_create_dependency(
 
 def get_or_create_relation(project, relation_data):
     """
-    Get  or create a CodebaseRelation then return it.
+    Get or create a CodebaseRelation then return it.
     The support for update is not useful as there is no fields on the model that
     could be updated.
     """
-    from_resource_path = relation_data.get("from_resource")
-    to_resource_path = relation_data.get("to_resource")
     resource_qs = project.codebaseresources
 
-    codebase_relation, _ = CodebaseRelation.objects.get_or_create(
-        project=project,
-        from_resource=resource_qs.get(path=from_resource_path),
-        to_resource=resource_qs.get(path=to_resource_path),
-        map_type=relation_data.get("map_type"),
+    from_resource_path = relation_data.get("from_resource")
+    from_resource = resource_qs.get(path=from_resource_path)
+
+    to_resource_path = relation_data.get("to_resource")
+    to_resource = resource_qs.get(path=to_resource_path)
+
+    map_type = relation_data.get("map_type")
+
+    codebase_relation, _ = get_or_create_relation_from_resources(
+        from_resource=from_resource,
+        to_resource=to_resource,
+        map_type=map_type,
     )
 
     return codebase_relation
 
 
+def get_or_create_relation_from_resources(
+    from_resource, to_resource, map_type, extra_data=None
+):
+    """
+    Get or create a Code baseRelationrelation of type ``map_type`` between the
+    ``from_resource`` and the ``to_resource`` and return it.
+    ``extra_data`` if any will override any pre-existing value for these.
+    """
+    codebase_relation, _ = CodebaseRelation.objects.get_or_create(
+        project=from_resource.project,
+        from_resource=from_resource,
+        to_resource=to_resource,
+        map_type=map_type,
+    )
+    if extra_data:
+        codebase_relation.extra_data = extra_data
+        codebase_relation.save()
+
+    return codebase_relation
+
+
 def make_relation(from_resource, to_resource, map_type, **extra_fields):
+    """
+    Create a Code baseRelationrelation of type ``map_type`` between the
+    ``from_resource`` and the ``to_resource`` and return it.
+    """
     return CodebaseRelation.objects.create(
         project=from_resource.project,
         from_resource=from_resource,
@@ -387,10 +417,13 @@ class LoopProgress:
             yield item
 
 
-def get_text_str_diff_ratio(str_a, str_b):
+def get_text_str_diff_ratio(str_a, str_b, as_lines=True):
     """
     Return a similarity ratio as a float between 0 and 1 by comparing the
     text content of the ``str_a`` and ``str_b``.
+
+    Split the text in lines and compare lines if ``as_lines`` is True.
+    Otherwise, process the input as-is.
 
     Return None if any of the two resources str is empty.
     """
@@ -399,15 +432,23 @@ def get_text_str_diff_ratio(str_a, str_b):
 
     if not isinstance(str_a, str) or not isinstance(str_b, str):
         raise ValueError("Values must be str")
-
-    matcher = difflib.SequenceMatcher(a=str_a.splitlines(), b=str_b.splitlines())
+    if as_lines:
+        a = str_a.splitlines()
+        b = str_b.splitlines()
+    else:
+        a = str_a
+        b = str_b
+    matcher = difflib.SequenceMatcher(a=a, b=b)
     return matcher.quick_ratio()
 
 
-def get_resource_diff_ratio(resource_a, resource_b):
+def get_resource_diff_ratio(resource_a, resource_b, as_lines=True):
     """
     Return a similarity ratio as a float between 0 and 1 by comparing the
     text content of the CodebaseResource ``resource_a`` and ``resource_b``.
+
+    Split the text in lines and compare lines if ``as_lines`` is True.
+    Otherwise, compare the files text content as-is.
 
     Return None if any of the two resources are not readable as text.
     """
@@ -415,4 +456,5 @@ def get_resource_diff_ratio(resource_a, resource_b):
         return get_text_str_diff_ratio(
             str_a=resource_a.file_content,
             str_b=resource_b.file_content,
+            as_lines=as_lines,
         )

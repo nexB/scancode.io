@@ -92,7 +92,7 @@ def find_paths(path, index):
     return Match(matched_length, resource_ids)
 
 
-def build_index(resource_id_and_paths, with_subpaths=True):
+def build_index(resource_id_and_paths, with_subpaths=True, logger=None):
     """
     Return an index (an index) built from a ``resource_id_and_paths``
     iterable of tuples of (resource_id int, resource_path string).
@@ -111,13 +111,16 @@ def build_index(resource_id_and_paths, with_subpaths=True):
     # create a new empty automaton.
     index = ahocorasick.Automaton(ahocorasick.STORE_ANY, ahocorasick.KEY_STRING)
 
-    for resource_id, resource_path in resource_id_and_paths:
+    for i, (resource_id, resource_path) in enumerate(resource_id_and_paths):
         segments = get_reversed_path_segments(resource_path)
         segments_count = len(segments)
         if with_subpaths:
             add_subpaths(resource_id, segments, segments_count, index)
         else:
             add_path(resource_id, segments, segments_count, index)
+
+    if logger:
+        logger(f"Indexed {i} total resources")
 
     index.make_automaton()
     return index

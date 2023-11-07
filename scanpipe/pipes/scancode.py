@@ -511,7 +511,7 @@ def get_virtual_codebase(project, input_location):
     return VirtualCodebase(input_location, temp_dir=str(temp_path), max_in_memory=0)
 
 
-def create_codebase_resources(project, scanned_codebase):
+def create_codebase_resources(project, scanned_codebase, defaults=None):
     """
     Save the resources of a ScanCode `scanned_codebase` scancode.resource.Codebase
     object to the database as a CodebaseResource of the `project`.
@@ -521,19 +521,35 @@ def create_codebase_resources(project, scanned_codebase):
     """
     for scanned_resource in scanned_codebase.walk(skip_root=True):
         resource_data = {}
+        extra_data = {}
 
-        for field in CodebaseResource._meta.fields:
+        known_field_names = set(field.name for field in CodebaseResource._meta.fields)
+        for field_name, value in  scanned_resource.to_dict().items():
             # Do not include the path as provided by the scanned_resource since it
             # includes the "root". The `get_path` method is used instead.
-            if field.name == "path":
+            if field_name == "path":
                 continue
-            value = getattr(scanned_resource, field.name, None)
             if value is not None:
-                resource_data[field.name] = value
+                if field_name in known_field_names:
+                    resource_data[field_name] = value
+                else:
+                    extra_data[field_name] = value
 
         resource_type = "FILE" if scanned_resource.is_file else "DIRECTORY"
         resource_data["type"] = CodebaseResource.Type[resource_type]
-        resource_path = scanned_resource.get_path(strip_root=True)
+
+        # TODO review this:
+        #  resource_path = scanned_resource.get_path(strip_root=True)
+        resource_path = scanned_resource.get_path(strip_root=False)
+
+        if defaults:
+            resource_data.update(defaults)
+            # TODO: Use a new path_prefix attribute?
+            if tag := defaults.get("tag"):
+                resource_path = f"{tag}/{resource_path.lstrip('/')}"
+
+        if extra_data:
+            resource_data["extra_data"] = extra_data
 
         codebase_resource, _ = CodebaseResource.objects.get_or_create(
             project=project,

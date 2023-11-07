@@ -1409,3 +1409,130 @@ def flag_whitespace_files(project):
         # If resource contains only whitespace characters.
         if not non_whitespace_bytes:
             resource.update(status=flag.IGNORED_WHITESPACE_FILE)
+
+
+def _map_dwarf_path_resource(
+    to_resource, from_resources, from_resources_index, logger=None,
+):
+    """
+    Map DWARF dwarf_paths found in the ``to_resource`` extra_data to
+    dwarf_paths of the ``from_resources`` CodebaseResource queryset using the
+    precomputed ``from_resources_index`` path index.
+    """
+    dwarf_source_paths = to_resource.extra_data.get("dwarf_source_paths") or {}
+    compiled_paths = dwarf_source_paths.get("compiled_paths") or []
+    included_paths = dwarf_source_paths.get("included_paths") or []
+    dwarf_paths_and_map_type = [
+        (compiled_paths, "dwarf_compiled_paths"),
+        (included_paths, "dwarf_included_paths"),
+    ]
+
+    dpnm = to_resource.extra_data["dwarf_paths_not_mapped"] = []
+    relations = {}
+
+    for dwarf_paths, map_type in dwarf_paths_and_map_type:
+        for dwarf_path in dwarf_paths:
+
+            match = pathmap.find_paths(dwarf_path, from_resources_index)
+            if not match:
+                dpnm.append(dwarf_path)
+                continue
+
+            # short dwarf path matched more than once is treated as not mapped for now
+            matched_path_length = match.matched_path_length
+
+            if matched_path_length == 1 and len(match.resource_ids) != 1:
+                dpnm.append(dwarf_path)
+                continue
+
+            # Sort match by most similar to the From/ side dwarf_path e.g. if we match
+            # some/foo/bar/baz.c and this/other/foo/bar/baz.c and the From is
+            # that/foo/bar/baz.c, some/foo/bar/baz.c has the most segments
+            # matched wins, e.g., the shortest From/ path wins.
+            matched_from_resources = [
+                from_resources.get(id=rid) for rid in match.resource_ids
+            ]
+            matched_from_resources.sort(key=lambda res: (len(res.path.strip("/").split("/")), res.path))
+            winning_from_resource = matched_from_resources[0]
+
+            # Do not count the "to/" segment as it is not "matchable"
+            # always strip leading segment ("to" or from" first segment)
+            dwarf_path_length = len(dwarf_path.strip("/").split("/")) - 1
+
+            extra_data = {
+                "path_score": f"{matched_path_length}/{dwarf_path_length}",
+                "dwarf_path": dwarf_path,
+            }
+
+            rel_key = (winning_from_resource.path, to_resource.path, map_type)
+            if rel_key not in relations:
+                relation = CodebaseRelation(
+                    project=winning_from_resource.project,
+                    from_resource=winning_from_resource,
+                    to_resource=to_resource,
+                    map_type=map_type,
+                    extra_data=extra_data,
+                )
+                relations[rel_key] = relation
+
+    if relations:
+        rels = CodebaseRelation.objects.bulk_create(relations.values())
+        if logger:
+            logger(f"Created {len(rels)} mapping using DWARF for: {to_resource.path!r}")
+    else:
+        if logger:
+            logger(f"No mapping using DWARF for: {to_resource.path!r}")
+
+    if dpnm:
+        # save the "dwarf dwarf_paths not mapped"
+        to_resource.save()
+        if logger:
+            logger(f"WARNING: DWARF paths NOT mapped for: {to_resource.path!r}: " + ", ".join(map(repr, dpnm)))
+
+
+def map_dwarf_path(project, logger=None):
+    """Map DWARF paths using similarities of path suffixes."""
+    project_files = project.codebaseresources.files().no_status()
+    from_resources = project_files.from_codebase()
+    to_resources = project_files.to_codebase().has_no_relation()
+    to_resources = to_resources.filter(extra_data__has_key="dwarf_source_paths")
+    resource_count = to_resources.count()
+
+    if logger:
+        logger(
+            f"Mapping {resource_count:,d} to/ resources using DWARF paths "
+            f"with {from_resources.count():,d} from/ resources."
+        )
+
+    from_resources_index = pathmap.build_index(
+        from_resources.values_list("id", "path"), with_subpaths=True
+    )
+
+    if logger:
+        logger(
+            f"Done building from/ resources index."
+        )
+
+    resource_iterator = to_resources.iterator(chunk_size=2000)
+    last_percent = 0
+    start_time = timer()
+    for resource_index, to_resource in enumerate(resource_iterator):
+        last_percent = pipes.log_progress(
+            logger,
+            resource_index,
+            resource_count,
+            last_percent,
+            increment_percent=10,
+            start_time=start_time,
+        )
+        if logger:
+            logger(
+                f"Mapping to/ resource: {to_resource.path!r} using DWARF paths."
+            )
+
+        _map_dwarf_path_resource(
+            to_resource,
+            from_resources,
+            from_resources_index,
+            logger=logger,
+        )

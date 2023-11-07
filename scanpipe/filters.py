@@ -409,6 +409,8 @@ MAP_TYPE_CHOICES = (
     ("js_path", "js path"),
     ("path", "path"),
     ("sha1", "sha1"),
+    ("dwarf_included_paths", "dwarf_included_paths"),
+    ("dwarf_compiled_paths", "dwarf_compiled_paths"),
 )
 
 
@@ -492,6 +494,7 @@ class ResourceFilterSet(FilterSetUtilsMixin, django_filters.FilterSet):
     relation_map_type = RelationMapTypeFilter(
         label="Relation map type",
         field_name="related_from__map_type",
+        distinct=True,
     )
 
     class Meta:
