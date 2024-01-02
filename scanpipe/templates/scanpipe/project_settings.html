@@ -108,6 +108,21 @@
               </div>
             </div>
 
+            <div class="panel">
+              <p id="webhooksubscriptions" class="panel-heading py-2 is-size-6">Webhook Subscriptions</p>
+              <div class="panel-block is-block px-4">
+                <div class="field">
+                  <label class="label" for="{{ form.webhooksubscriptions.id_for_label }}">
+                    {{ form.webhooksubscriptions.label }}
+                  </label>
+                  <div class="control">
+                    {{ form.webhooksubscriptions }}
+                  </div>
+                  <p class="help">{{ form.webhooksubscriptions.help_text }}</p>
+                </div>
+              </div>
+            </div>
+
             <div class="columns mt-4 mb-5 is-variable is-1">
               <div class="column is-one-third">
                 <a href="{% url 'project_detail' project.slug %}" class="button is-fullwidth">Cancel</a>

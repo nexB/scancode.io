@@ -29,6 +29,7 @@ from taggit.forms import TagWidget
 
 from scanpipe.models import Project
 from scanpipe.pipes.fetch import fetch_urls
+from scanpipe.pipes.post import test_json_post_accepting_urls
 
 scanpipe_app = apps.get_app_config("scanpipe")
 
@@ -215,9 +216,19 @@ class ListTextarea(forms.CharField):
 
     def prepare_value(self, value):
         """Join the list items into a string with newlines."""
-        if value is not None:
+        if value is not None and not isinstance(value, str):
             value = "\n".join(value)
         return value
+
+
+class WebhookSubscriptionArea(ListTextarea):
+    def clean(self, value):
+        # Run the default ListTextarea clean method
+        cleaned_value = super().clean(value)
+        errors = test_json_post_accepting_urls(cleaned_value)
+        if errors:
+            raise ValidationError("Could not post to: " + ", ".join(errors))
+        return cleaned_value
 
 
 class ProjectSettingsForm(forms.ModelForm):
@@ -226,6 +237,7 @@ class ProjectSettingsForm(forms.ModelForm):
         "ignored_patterns",
         "scancode_license_score",
         "attribution_template",
+        "webhooksubscriptions",
     ]
     extract_recursively = forms.BooleanField(
         label="Extract recursively",
@@ -263,6 +275,19 @@ class ProjectSettingsForm(forms.ModelForm):
         help_text="Custom attribution template.",
         widget=forms.Textarea(attrs={"class": "textarea is-dynamic", "rows": 3}),
     )
+    webhooksubscriptions = WebhookSubscriptionArea(
+        label="Webhook Target URLs",
+        required=False,
+        help_text="Provide one or more webhook subscriptions, one per line.",
+        widget=forms.Textarea(
+            attrs={
+                "class": "textarea is-dynamic",
+                "rows": 3,
+                "placeholder": "https://webhook.com/post-data\n\
+https://domain.com/send-json",
+            },
+        ),
+    )
 
     class Meta:
         model = Project
@@ -283,6 +308,11 @@ class ProjectSettingsForm(forms.ModelForm):
             # Do not override the field ``initial`` if the key is not in the settings
             if field_name in self.instance.settings:
                 field.initial = self.instance.settings.get(field_name)
+            elif field_name == "webhooksubscriptions":
+                # websocketsubscriptions is a special case
+                field.initial = "\n".join(
+                    [s.target_url for s in self.instance.webhooksubscriptions.all()]
+                )
 
     def save(self, *args, **kwargs):
         project = super().save(*args, **kwargs)
@@ -295,6 +325,16 @@ class ProjectSettingsForm(forms.ModelForm):
             field_name: self.cleaned_data[field_name]
             for field_name in self.settings_fields
         }
+
+        if "webhooksubscriptions" in config.keys() and config[
+            "webhooksubscriptions"
+        ] not in [None, ""]:
+            project.webhooksubscriptions.all().delete()
+            for target_url in config["webhooksubscriptions"]:
+                project.add_webhook_subscription(target_url)
+
+        del config["webhooksubscriptions"]
+
         project.settings.update(config)
         project.save(update_fields=["settings"])
 
