@@ -586,6 +586,14 @@ def create_codebase_resources(project, scanned_codebase):
                 discovered_package=package,
             )
 
+        license_detections = getattr(scanned_resource, "license_detections", [])
+        for detection_data in license_detections:
+            detection_identifier = detection_data.get("identifier")
+            license_detection = project.discoveredlicenses.get_or_none(
+                identifier=detection_identifier
+            )
+            logger.debug(f"Add {codebase_resource} to {license_detection}")
+
 
 def create_discovered_packages(project, scanned_codebase):
     """
@@ -618,6 +626,17 @@ def create_discovered_dependencies(
                 dependency_data,
                 strip_datafile_path_root=strip_datafile_path_root,
             )
+
+
+def create_discovered_licenses(project, scanned_codebase):
+    """
+    Save the license detections of a ScanCode `scanned_codebase`
+    scancode.resource.Codebase object to the database as a DiscoveredLicense of
+    `project`. 
+    """
+    if hasattr(scanned_codebase.attributes, "license_detections"):
+        for detection_data in scanned_codebase.attributes.license_detections:
+            pipes.update_or_create_license_detection(project, detection_data)
 
 
 def set_codebase_resource_for_package(codebase_resource, discovered_package):

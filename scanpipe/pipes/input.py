@@ -35,6 +35,7 @@ from scanpipe.models import CodebaseRelation
 from scanpipe.models import CodebaseResource
 from scanpipe.models import DiscoveredDependency
 from scanpipe.models import DiscoveredPackage
+from scanpipe.models import DiscoveredLicense
 from scanpipe.pipes import scancode
 from scanpipe.pipes.output import mappings_key_by_fieldname
 
@@ -78,10 +79,11 @@ def is_archive(location):
 
 def load_inventory_from_toolkit_scan(project, input_location):
     """
-    Create packages, dependencies, and resources loaded from the ScanCode-toolkit scan
-    results located at ``input_location``.
+    Create license detections, packages, dependencies, and resources
+    loaded from the ScanCode-toolkit scan results located at ``input_location``.
     """
     scanned_codebase = scancode.get_virtual_codebase(project, input_location)
+    scancode.create_discovered_licenses(project, scanned_codebase)
     scancode.create_discovered_packages(project, scanned_codebase)
     scancode.create_codebase_resources(project, scanned_codebase)
     scancode.create_discovered_dependencies(
@@ -91,9 +93,12 @@ def load_inventory_from_toolkit_scan(project, input_location):
 
 def load_inventory_from_scanpipe(project, scan_data):
     """
-    Create packages, dependencies, resources, and relations loaded from a ScanCode.io
-    JSON output provided as ``scan_data``.
+    Create license detections, packages, dependencies, resources, and relations
+    loaded from a ScanCode.io JSON output provided as ``scan_data``.
     """
+    for detection_data in scan_data.get("license_detections", []):
+        pipes.update_or_create_license_detection(project, detection_data)
+
     for package_data in scan_data.get("packages", []):
         pipes.update_or_create_package(project, package_data)
 
@@ -110,12 +115,14 @@ def load_inventory_from_scanpipe(project, scan_data):
 model_to_object_maker_func = {
     DiscoveredPackage: pipes.update_or_create_package,
     DiscoveredDependency: pipes.update_or_create_dependency,
+    DiscoveredLicense: pipes.update_or_create_license_detection,
     CodebaseResource: pipes.update_or_create_resource,
     CodebaseRelation: pipes.get_or_create_relation,
 }
 
 worksheet_name_to_model = {
     "PACKAGES": DiscoveredPackage,
+    "LICENSE_DETECTIONS": DiscoveredLicense,
     "RESOURCES": CodebaseResource,
     "DEPENDENCIES": DiscoveredDependency,
     "RELATIONS": CodebaseRelation,

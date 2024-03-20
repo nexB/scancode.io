@@ -37,6 +37,7 @@ from scanpipe.models import CodebaseRelation
 from scanpipe.models import CodebaseResource
 from scanpipe.models import DiscoveredDependency
 from scanpipe.models import DiscoveredPackage
+from scanpipe.models import DiscoveredLicense
 from scanpipe.pipes import scancode
 
 logger = logging.getLogger("scanpipe.pipes")
@@ -243,6 +244,37 @@ def update_or_create_dependency(
         )
 
     return dependency
+
+
+def update_or_create_license_detection(project, detection_data):
+    """
+    Get, update or create a DiscoveredLicense object then return it.
+    Use the `project` and `detection_data` mapping to lookup and creates the
+    DiscoveredLicense using its detection identifier as a unique key.
+    """
+    detection_identifier = detection_data["identifier"]
+
+    license_detection = project.discoveredlicenses.get_or_none(
+        identifier=detection_identifier,
+    )
+    detection_data = _clean_license_detection_data(detection_data)
+
+    if license_detection:
+        license_detection.update_from_data(detection_data)
+    else:
+        license_detection = DiscoveredLicense.create_from_data(
+            project,
+            detection_data,
+        )
+
+    return license_detection
+
+
+def _clean_license_detection_data(detection_data):
+    detection_data = detection_data.copy()
+    matches = detection_data.pop("sample_matches")
+    detection_data["matches"] = matches
+    return detection_data
 
 
 def get_or_create_relation(project, relation_data):
