@@ -612,6 +612,7 @@ class Project(UUIDPKModel, ExtraDataFieldMixin, UpdateMixin, models.Model):
             self.projectmessages,
             self.codebaserelations,
             self.discovereddependencies,
+            self.discoveredlicenses,
             self.codebaseresources,
             self.runs,
         ]
@@ -3471,6 +3472,150 @@ class DiscoveredDependency(
             version=self.version,
             external_refs=external_refs,
         )
+
+
+class DiscoveredLicenseQuerySet(ProjectRelatedQuerySet):
+    def order_by_count_and_expression(self):
+        """Order by detection count and license expression (identifer) fields."""
+        return self.order_by("detection_count", "identifier")
+
+
+class AbstractLicenseDetection(models.Model):
+    """
+    These fields should be kept in line with
+    `licensedcode.detection.LicenseDetection`.
+    """
+
+    license_expression = models.TextField(
+        blank=True,
+        help_text=_(
+            'A license expression string using the SPDX license expression'
+            ' syntax and ScanCode license keys, the effective license expression'
+            ' for this license detection.'
+        ),
+    )
+
+    license_expression_spdx = models.TextField(
+        blank=True,
+        help_text=_('SPDX license expression string with SPDX ids.'),
+    )
+
+    matches = models.JSONField(
+        default=list,
+        blank=True,
+        help_text=_('List of license matches combined in this detection.'),
+    )
+
+    detection_log = models.JSONField(
+        default=list,
+        blank=True,
+        help_text=_(
+            'A list of detection DetectionRule explaining how '
+            'this detection was created.'
+        ),
+    )
+
+    identifier = models.CharField(
+        max_length=1024,
+        blank=True,
+        help_text=_(
+            'An identifier unique for a license detection, containing the license '
+            'expression and a UUID crafted from the match contents.'    
+        ),
+    )
+
+    class Meta:
+        abstract = True
+
+
+class DiscoveredLicense(
+    ProjectRelatedModel,
+    SaveProjectMessageMixin,
+    UpdateFromDataMixin,
+    ComplianceAlertMixin,
+    AbstractLicenseDetection,
+):
+    """
+    A project's Discovered Licenses are the unique License Detection objects 
+    discovered in the code under analysis.
+
+    """
+    license_expression_field = "license_expression"
+
+    detection_count = models.BigIntegerField(
+        blank=True,
+        null=True,
+        help_text=_("Total number of this license detection discovered."),
+    )
+
+    file_regions = models.JSONField(
+        default=list,
+        blank=True,
+        help_text=_(
+            'A list of file regions with resource path, start and end line '
+            'details for each place this license detection was discovered at. '
+            'Also contains whether this license was discovered from a file or '
+            'from package metadata.'
+        ),
+    )
+
+    objects = DiscoveredLicenseQuerySet.as_manager()
+
+    class Meta:
+        ordering = ["detection_count", "identifier"]
+        indexes = [
+            models.Index(fields=["identifier"]),
+            models.Index(fields=["license_expression"]),
+            models.Index(fields=["license_expression_spdx"]),
+            models.Index(fields=["detection_count"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["project", "identifier"],
+                condition=~Q(identifier=""),
+                name="%(app_label)s_%(class)s_unique_license_id_within_project",
+            ),
+        ]
+
+    def __str__(self):
+        return self.identifier
+
+    @classmethod
+    def create_from_data(cls, project, detection_data):
+        """
+        Create and returns a DiscoveredLicense for a `project` from the `detection_data`.
+        If one of the values of the required fields is not available, a "ProjectMessage"
+        is created instead of a new DiscoveredLicense instance.
+        """
+        detection_data = detection_data.copy()
+        required_fields = ["license_expression", "identifier", "matches"]
+        missing_values = [
+            field_name
+            for field_name in required_fields
+            if not detection_data.get(field_name)
+        ]
+
+        if missing_values:
+            message = (
+                f"No values for the following required fields: "
+                f"{', '.join(missing_values)}"
+            )
+
+            project.add_warning(description=message, model=cls, details=detection_data)
+            return
+
+        cleaned_data = {
+            field_name: value
+            for field_name, value in detection_data.items()
+            if field_name in cls.model_fields() and value not in EMPTY_VALUES
+        }
+
+        discovered_license = cls(project=project, **cleaned_data)
+        # Using save_error=False to not capture potential errors at this level but
+        # rather in the CodebaseResource.create_and_add_license_data method so resource data
+        # can be injected in the ProjectMessage record.
+        discovered_license.save(save_error=False, capture_exception=False)
+        return discovered_license
 
 
 class WebhookSubscription(UUIDPKModel, ProjectRelatedModel):

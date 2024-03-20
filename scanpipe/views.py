@@ -65,6 +65,7 @@ from scanpipe.api.serializers import DiscoveredDependencySerializer
 from scanpipe.filters import PAGE_VAR
 from scanpipe.filters import DependencyFilterSet
 from scanpipe.filters import PackageFilterSet
+from scanpipe.filters import LicenseFilterSet
 from scanpipe.filters import ProjectFilterSet
 from scanpipe.filters import ProjectMessageFilterSet
 from scanpipe.filters import RelationFilterSet
@@ -82,6 +83,7 @@ from scanpipe.models import CodebaseRelation
 from scanpipe.models import CodebaseResource
 from scanpipe.models import DiscoveredDependency
 from scanpipe.models import DiscoveredPackage
+from scanpipe.models import DiscoveredLicense
 from scanpipe.models import InputSource
 from scanpipe.models import Project
 from scanpipe.models import ProjectMessage
@@ -1517,6 +1519,46 @@ class DiscoveredDependencyListView(
         return super().get_queryset().order_by("dependency_uid")
 
 
+class DiscoveredLicenseListView(
+    ConditionalLoginRequired,
+    ProjectRelatedViewMixin,
+    TableColumnsMixin,
+    ExportXLSXMixin,
+    PaginatedFilterView,
+):
+    model = DiscoveredLicense
+    filterset_class = LicenseFilterSet
+    template_name = "scanpipe/license_detection_list.html"
+    paginate_by = settings.SCANCODEIO_PAGINATE_BY.get("license", 10)
+    table_columns = [
+        "identifier",
+        {
+            "field_name": "license_expression",
+            "filter_fieldname": "license_expression",
+        },
+        "license_expression_spdx",
+        "detection_count",
+        {
+            "field_name": "compliance_alert",
+            "condition": scanpipe_app.policies_enabled,
+            "filter_fieldname": "compliance_alert",
+        },
+    ]
+
+    def get_queryset(self):
+        return (
+            super()
+            .get_queryset()
+            .only(
+                "detection_count",
+                "license_expression",
+                "license_expression_spdx",
+                "compliance_alert",
+            )
+            .order_by_count_and_expression()
+        )
+
+
 class ProjectMessageListView(
     ConditionalLoginRequired,
     ProjectRelatedViewMixin,
@@ -1967,6 +2009,38 @@ class DiscoveredDependencyDetailsView(
         context = super().get_context_data(**kwargs)
         context["dependency_data"] = DiscoveredDependencySerializer(self.object).data
         return context
+    
+
+class DiscoveredLicenseDetailsView(
+    ConditionalLoginRequired,
+    ProjectRelatedViewMixin,
+    TabSetMixin,
+    generic.DetailView,
+):
+    model = DiscoveredLicense
+    model_label = "license_detections"
+    slug_field = "identifier"
+    slug_url_kwarg = "identifier"
+    template_name = "scanpipe/license_detection_detail.html"
+    tabset = {
+        "essentials": {
+            "fields": [
+                "license_expression",
+                "license_expression_spdx",
+                "identifier",
+                "detection_count",
+            ],
+            "icon_class": "fa-solid fa-info-circle",
+        },
+        "detection": {
+            "fields": [
+                {"field_name": "matches", "render_func": render_as_yaml},
+                {"field_name": "detection_log", "render_func": render_as_yaml},
+                {"field_name": "file_regions", "render_func": render_as_yaml},
+            ],
+            "icon_class": "fa-solid fa-search",
+        },
+    }
 
 
 @conditional_login_required

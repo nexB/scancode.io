@@ -52,6 +52,11 @@ urlpatterns = [
         name="package_detail",
     ),
     path(
+        "project/<slug:slug>/license_detections/<slug:identifier>/",
+        views.DiscoveredLicenseDetailsView.as_view(),
+        name="license_detail",
+    ),
+    path(
         "project/<slug:slug>/dependencies/<path:dependency_uid>/",
         views.DiscoveredDependencyDetailsView.as_view(),
         name="dependency_detail",
@@ -60,6 +65,11 @@ urlpatterns = [
         "project/<slug:slug>/packages/",
         views.DiscoveredPackageListView.as_view(),
         name="project_packages",
+    ),
+    path(
+        "project/<slug:slug>/license_detections/",
+        views.DiscoveredLicenseListView.as_view(),
+        name="project_licenses",
     ),
     path(
         "project/<slug:slug>/dependencies/",

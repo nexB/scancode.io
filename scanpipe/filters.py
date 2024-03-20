@@ -39,6 +39,7 @@ from scanpipe.models import CodebaseRelation
 from scanpipe.models import CodebaseResource
 from scanpipe.models import DiscoveredDependency
 from scanpipe.models import DiscoveredPackage
+from scanpipe.models import DiscoveredLicense
 from scanpipe.models import Project
 from scanpipe.models import ProjectMessage
 from scanpipe.models import Run
@@ -591,6 +592,19 @@ class DiscoveredPackageSearchFilter(QuerySearchFilter):
         return qs.filter(lookups)
 
 
+class DiscoveredLicenseSearchFilter(QuerySearchFilter):
+    def filter(self, qs, value):
+        if not value:
+            return qs
+
+        search_fields = ["license_expression", "license_expression_spdx"]
+        lookups = Q()
+        for field_names in search_fields:
+            lookups |= Q(**{f"{field_names}__{self.lookup_expr}": value})
+
+        return qs.filter(lookups)
+
+
 class GroupOrderingFilter(django_filters.OrderingFilter):
     """Add the ability to provide a group a fields to order by."""
 
@@ -752,6 +766,41 @@ class DependencyFilterSet(FilterSetUtilsMixin, django_filters.FilterSet):
             "is_resolved",
             "datasource_id",
             "is_vulnerable",
+        ]
+
+
+class LicenseFilterSet(FilterSetUtilsMixin, django_filters.FilterSet):
+    dropdown_widget_fields = [
+        "compliance_alert",
+    ]
+
+    search = DiscoveredLicenseSearchFilter(
+        label="Search", field_name="name", lookup_expr="icontains"
+    )
+    sort = GroupOrderingFilter(
+        label="Sort",
+        fields=[
+            "detection_count",
+            "identifier",
+            "license_expression",
+            "license_expression_spdx",
+            "compliance_alert",
+        ],
+    )
+    license_expression = ParentAllValuesFilter()
+    compliance_alert = django_filters.ChoiceFilter(
+        choices=[(EMPTY_VAR, "None")] + CodebaseResource.Compliance.choices,
+    )
+
+    class Meta:
+        model = DiscoveredLicense
+        fields = [
+            "search",
+            "identifier",
+            "detection_count",
+            "license_expression",
+            "license_expression_spdx",
+            "compliance_alert",
         ]
 
 
