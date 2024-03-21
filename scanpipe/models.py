@@ -1230,6 +1230,11 @@ class Project(UUIDPKModel, ExtraDataFieldMixin, UpdateMixin, models.Model):
         return self.discovereddependencies.count()
 
     @cached_property
+    def license_detections_count(self):
+        """Return the number of license detections in this project."""
+        return self.discoveredlicenses.count()
+
+    @cached_property
     def message_count(self):
         """Return the number of messages related to this project."""
         return self.projectmessages.count()
@@ -3477,7 +3482,7 @@ class DiscoveredDependency(
 class DiscoveredLicenseQuerySet(ProjectRelatedQuerySet):
     def order_by_count_and_expression(self):
         """Order by detection count and license expression (identifer) fields."""
-        return self.order_by("detection_count", "identifier")
+        return self.order_by("-detection_count", "identifier")
 
 
 class AbstractLicenseDetection(models.Model):
