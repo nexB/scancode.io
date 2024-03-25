@@ -34,8 +34,8 @@ from scanpipe import pipes
 from scanpipe.models import CodebaseRelation
 from scanpipe.models import CodebaseResource
 from scanpipe.models import DiscoveredDependency
-from scanpipe.models import DiscoveredPackage
 from scanpipe.models import DiscoveredLicense
+from scanpipe.models import DiscoveredPackage
 from scanpipe.pipes import scancode
 from scanpipe.pipes.output import mappings_key_by_fieldname
 

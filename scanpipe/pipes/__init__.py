@@ -36,8 +36,8 @@ from scanpipe import humanize_time
 from scanpipe.models import CodebaseRelation
 from scanpipe.models import CodebaseResource
 from scanpipe.models import DiscoveredDependency
-from scanpipe.models import DiscoveredPackage
 from scanpipe.models import DiscoveredLicense
+from scanpipe.models import DiscoveredPackage
 from scanpipe.pipes import scancode
 
 logger = logging.getLogger("scanpipe.pipes")
@@ -247,7 +247,10 @@ def update_or_create_dependency(
 
 
 def update_or_create_license_detection(
-    project, detection_data, resource_path, from_package=False,
+    project,
+    detection_data,
+    resource_path,
+    from_package=False,
 ):
     """
     Get, update or create a DiscoveredLicense object then return it.

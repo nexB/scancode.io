@@ -38,8 +38,8 @@ from packageurl.contrib.django.filters import PackageURLFilter
 from scanpipe.models import CodebaseRelation
 from scanpipe.models import CodebaseResource
 from scanpipe.models import DiscoveredDependency
-from scanpipe.models import DiscoveredPackage
 from scanpipe.models import DiscoveredLicense
+from scanpipe.models import DiscoveredPackage
 from scanpipe.models import Project
 from scanpipe.models import ProjectMessage
 from scanpipe.models import Run

@@ -2727,14 +2727,10 @@ class DiscoveredPackageQuerySet(
         return self.annotate(resources_count=count_subquery)
 
     def has_license_detections(self):
-        return self.filter(
-            ~Q(license_detections=[]) | ~Q(other_license_detections=[])
-        )
+        return self.filter(~Q(license_detections=[]) | ~Q(other_license_detections=[]))
 
     def has_no_license_detections(self):
-        return self.filter(
-            Q(license_detections=[]) & Q(other_license_detections=[])
-        )
+        return self.filter(Q(license_detections=[]) & Q(other_license_detections=[]))
 
 
 class AbstractPackage(models.Model):
@@ -3504,30 +3500,30 @@ class AbstractLicenseDetection(models.Model):
     license_expression = models.TextField(
         blank=True,
         help_text=_(
-            'A license expression string using the SPDX license expression'
-            ' syntax and ScanCode license keys, the effective license expression'
-            ' for this license detection.'
+            "A license expression string using the SPDX license expression"
+            " syntax and ScanCode license keys, the effective license expression"
+            " for this license detection."
         ),
     )
 
     license_expression_spdx = models.TextField(
         blank=True,
-        help_text=_('SPDX license expression string with SPDX ids.'),
+        help_text=_("SPDX license expression string with SPDX ids."),
     )
 
     matches = models.JSONField(
         _("Reference Matches"),
         default=list,
         blank=True,
-        help_text=_('List of license matches combined in this detection.'),
+        help_text=_("List of license matches combined in this detection."),
     )
 
     detection_log = models.JSONField(
         default=list,
         blank=True,
         help_text=_(
-            'A list of detection DetectionRule explaining how '
-            'this detection was created.'
+            "A list of detection DetectionRule explaining how "
+            "this detection was created."
         ),
     )
 
@@ -3535,8 +3531,8 @@ class AbstractLicenseDetection(models.Model):
         max_length=1024,
         blank=True,
         help_text=_(
-            'An identifier unique for a license detection, containing the license '
-            'expression and a UUID crafted from the match contents.'    
+            "An identifier unique for a license detection, containing the license "
+            "expression and a UUID crafted from the match contents."
         ),
     )
 
@@ -3552,10 +3548,11 @@ class DiscoveredLicense(
     AbstractLicenseDetection,
 ):
     """
-    A project's Discovered Licenses are the unique License Detection objects 
+    A project's Discovered Licenses are the unique License Detection objects
     discovered in the code under analysis.
 
     """
+
     license_expression_field = "license_expression"
 
     # If this license was discovered in a extracted license statement
@@ -3573,10 +3570,10 @@ class DiscoveredLicense(
         default=list,
         blank=True,
         help_text=_(
-            'A list of file regions with resource path, start and end line '
-            'details for each place this license detection was discovered at. '
-            'Also contains whether this license was discovered from a file or '
-            'from package metadata.'
+            "A list of file regions with resource path, start and end line "
+            "details for each place this license detection was discovered at. "
+            "Also contains whether this license was discovered from a file or "
+            "from package metadata."
         ),
     )
 
@@ -3604,9 +3601,10 @@ class DiscoveredLicense(
     @classmethod
     def create_from_data(cls, project, detection_data):
         """
-        Create and returns a DiscoveredLicense for a `project` from the `detection_data`.
-        If one of the values of the required fields is not available, a "ProjectMessage"
-        is created instead of a new DiscoveredLicense instance.
+        Create and returns a DiscoveredLicense for a `project` from the
+        `detection_data`. If one of the values of the required fields is not
+        available, a "ProjectMessage" is created instead of a new
+        DiscoveredLicense instance.
         """
         detection_data = detection_data.copy()
         required_fields = ["license_expression", "identifier", "matches"]
@@ -3622,7 +3620,11 @@ class DiscoveredLicense(
                 f"{', '.join(missing_values)}"
             )
 
-            project.add_warning(description=message, model=cls, details=detection_data)
+            project.add_warning(
+                description=message,
+                model=cls,
+                details=detection_data,
+            )
             return
 
         cleaned_data = {
@@ -3633,8 +3635,8 @@ class DiscoveredLicense(
 
         discovered_license = cls(project=project, **cleaned_data)
         # Using save_error=False to not capture potential errors at this level but
-        # rather in the CodebaseResource.create_and_add_license_data method so resource data
-        # can be injected in the ProjectMessage record.
+        # rather in the CodebaseResource.create_and_add_license_data method so
+        # resource data can be injected in the ProjectMessage record.
         discovered_license.save(save_error=False, capture_exception=False)
         return discovered_license
 
@@ -3644,7 +3646,7 @@ class DiscoveredLicense(
         `file_regions` list and increase the `detection_count` by 1.
         """
         file_region_data = file_region.to_dict()
-        if not file_region_data in self.file_regions:
+        if file_region_data not in self.file_regions:
             self.file_regions.append(file_region_data)
             if not self.detection_count:
                 self.detection_count = 1

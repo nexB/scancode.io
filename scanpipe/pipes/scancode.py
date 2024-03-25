@@ -37,9 +37,9 @@ from django.db.models import ObjectDoesNotExist
 from commoncode import fileutils
 from commoncode.resource import VirtualCodebase
 from extractcode import api as extractcode_api
+from licensedcode.detection import FileRegion
 from packagedcode import get_package_handler
 from packagedcode import models as packagedcode_models
-from licensedcode.detection import FileRegion
 from scancode import Scanner
 from scancode import api as scancode_api
 from scancode import cli as scancode_cli
@@ -460,12 +460,8 @@ def get_file_region(detection_data, resource_path):
     object containing information about where this license was detected
     exactly in a codebase, with `resource_path`, with start and end lines.
     """
-    start_line = min(
-        [match['start_line'] for match in detection_data["matches"]]
-    )
-    end_line = max(
-        [match['end_line'] for match in detection_data["matches"]]
-    )
+    start_line = min([match["start_line"] for match in detection_data["matches"]])
+    end_line = max([match["end_line"] for match in detection_data["matches"]])
     return FileRegion(
         path=resource_path,
         start_line=start_line,
@@ -694,7 +690,7 @@ def create_discovered_licenses(project, scanned_codebase):
     """
     Save the license detections of a ScanCode `scanned_codebase`
     scancode.resource.Codebase object to the database as a DiscoveredLicense of
-    `project`. 
+    `project`.
     """
     if hasattr(scanned_codebase.attributes, "license_detections"):
         for detection_data in scanned_codebase.attributes.license_detections:

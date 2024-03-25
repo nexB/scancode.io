@@ -30,8 +30,8 @@ from scanpipe.api import ExcludeFromListViewMixin
 from scanpipe.models import CodebaseRelation
 from scanpipe.models import CodebaseResource
 from scanpipe.models import DiscoveredDependency
-from scanpipe.models import DiscoveredPackage
 from scanpipe.models import DiscoveredLicense
+from scanpipe.models import DiscoveredPackage
 from scanpipe.models import InputSource
 from scanpipe.models import Project
 from scanpipe.models import ProjectMessage

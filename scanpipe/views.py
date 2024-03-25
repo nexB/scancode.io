@@ -64,8 +64,8 @@ from scancodeio.auth import conditional_login_required
 from scanpipe.api.serializers import DiscoveredDependencySerializer
 from scanpipe.filters import PAGE_VAR
 from scanpipe.filters import DependencyFilterSet
-from scanpipe.filters import PackageFilterSet
 from scanpipe.filters import LicenseFilterSet
+from scanpipe.filters import PackageFilterSet
 from scanpipe.filters import ProjectFilterSet
 from scanpipe.filters import ProjectMessageFilterSet
 from scanpipe.filters import RelationFilterSet
@@ -82,8 +82,8 @@ from scanpipe.models import PURL_FIELDS
 from scanpipe.models import CodebaseRelation
 from scanpipe.models import CodebaseResource
 from scanpipe.models import DiscoveredDependency
-from scanpipe.models import DiscoveredPackage
 from scanpipe.models import DiscoveredLicense
+from scanpipe.models import DiscoveredPackage
 from scanpipe.models import InputSource
 from scanpipe.models import Project
 from scanpipe.models import ProjectMessage
@@ -2009,7 +2009,7 @@ class DiscoveredDependencyDetailsView(
         context = super().get_context_data(**kwargs)
         context["dependency_data"] = DiscoveredDependencySerializer(self.object).data
         return context
-    
+
 
 class DiscoveredLicenseDetailsView(
     ConditionalLoginRequired,
