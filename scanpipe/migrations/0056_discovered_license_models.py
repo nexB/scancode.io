@@ -8,7 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("scanpipe", "0053_restructure_pipelines_data"),
+        ("scanpipe", "0055_discoveredpackage_datafile_paths"),
     ]
 
     operations = [
