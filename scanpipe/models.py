@@ -2726,6 +2726,16 @@ class DiscoveredPackageQuerySet(
         )
         return self.annotate(resources_count=count_subquery)
 
+    def has_license_detections(self):
+        return self.filter(
+            ~Q(license_detections=[]) | ~Q(other_license_detections=[])
+        )
+
+    def has_no_license_detections(self):
+        return self.filter(
+            Q(license_detections=[]) & Q(other_license_detections=[])
+        )
+
 
 class AbstractPackage(models.Model):
     """These fields should be kept in line with `packagedcode.models.PackageData`."""
@@ -3506,6 +3516,7 @@ class AbstractLicenseDetection(models.Model):
     )
 
     matches = models.JSONField(
+        _("Reference Matches"),
         default=list,
         blank=True,
         help_text=_('List of license matches combined in this detection.'),
@@ -3547,6 +3558,10 @@ class DiscoveredLicense(
     """
     license_expression_field = "license_expression"
 
+    # If this license was discovered in a extracted license statement
+    # this is True, and False if this was discovered in a file.
+    from_package = None
+
     detection_count = models.BigIntegerField(
         blank=True,
         null=True,
@@ -3554,6 +3569,7 @@ class DiscoveredLicense(
     )
 
     file_regions = models.JSONField(
+        _("Detection Locations"),
         default=list,
         blank=True,
         help_text=_(
@@ -3621,6 +3637,20 @@ class DiscoveredLicense(
         # can be injected in the ProjectMessage record.
         discovered_license.save(save_error=False, capture_exception=False)
         return discovered_license
+
+    def update_with_file_region(self, file_region):
+        """
+        If the `file_region` is a new file region, include it in the
+        `file_regions` list and increase the `detection_count` by 1.
+        """
+        file_region_data = file_region.to_dict()
+        if not file_region_data in self.file_regions:
+            self.file_regions.append(file_region_data)
+            if not self.detection_count:
+                self.detection_count = 1
+            else:
+                self.detection_count += 1
+            self.save(update_fields=["detection_count", "file_regions"])
 
 
 class WebhookSubscription(UUIDPKModel, ProjectRelatedModel):

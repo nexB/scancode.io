@@ -246,11 +246,18 @@ def update_or_create_dependency(
     return dependency
 
 
-def update_or_create_license_detection(project, detection_data):
+def update_or_create_license_detection(
+    project, detection_data, resource_path, from_package=False,
+):
     """
     Get, update or create a DiscoveredLicense object then return it.
     Use the `project` and `detection_data` mapping to lookup and creates the
     DiscoveredLicense using its detection identifier as a unique key.
+
+    Additonally if `resource_path` is passed, add the file region where
+    the license was detected to the DiscoveredLicense object, if not present
+    already. `from_package` is True if the license detection was in a
+    `extracted_license_statement` from a package metadata.
     """
     detection_identifier = detection_data["identifier"]
 
@@ -267,13 +274,22 @@ def update_or_create_license_detection(project, detection_data):
             detection_data,
         )
 
+    if resource_path:
+        file_region = scancode.get_file_region(
+            detection_data=detection_data,
+            resource_path=resource_path,
+        )
+        license_detection.update_with_file_region(file_region)
+
+    license_detection.from_package = from_package
     return license_detection
 
 
 def _clean_license_detection_data(detection_data):
     detection_data = detection_data.copy()
-    matches = detection_data.pop("sample_matches")
-    detection_data["matches"] = matches
+    if "sample_matches" in detection_data:
+        matches = detection_data.pop("sample_matches")
+        detection_data["matches"] = matches
     return detection_data
 
 
