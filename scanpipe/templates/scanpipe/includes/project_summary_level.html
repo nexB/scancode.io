@@ -42,6 +42,20 @@
   </div>
   <div class="level-item has-text-centered">
     <div>
+      <p class="heading">License Detections</p>
+      <p class="{{ title_class }} is-flex is-align-items-center is-justify-content-center">
+        {% if project.license_detections_count %}
+          <a href="{% url 'project_licenses' project.slug %}">
+            {{ project.license_detections_count|intcomma }}
+          </a>
+        {% else %}
+          <span>0</span>
+        {% endif %}
+      </p>
+    </div>
+  </div>
+  <div class="level-item has-text-centered">
+    <div>
       <p class="heading">Resources</p>
       <p class="{{ title_class }}">
         {% if project.resource_count %}

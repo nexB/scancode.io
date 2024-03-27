@@ -83,6 +83,7 @@ class DeployToDevelop(Pipeline):
             cls.remove_packages_without_resources,
             cls.scan_unmapped_to_files,
             cls.scan_mapped_from_for_files,
+            cls.collect_and_create_license_detections,
             cls.flag_deployed_from_resources_with_missing_license,
             cls.create_local_files_packages,
         )
@@ -285,6 +286,13 @@ class DeployToDevelop(Pipeline):
         """Scan mapped ``from/`` files for copyrights, licenses, emails, and urls."""
         scan_files = d2d.get_from_files_for_scanning(self.project.codebaseresources)
         scancode.scan_for_files(self.project, scan_files, progress_logger=self.log)
+
+    def collect_and_create_license_detections(self):
+        """
+        Collect and create unique license detections from resources and
+        package data.
+        """
+        scancode.collect_and_create_license_detections(project=self.project)
 
     def create_local_files_packages(self):
         """Create local-files packages for codebase resources not part of a package."""

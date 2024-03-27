@@ -45,6 +45,7 @@ class RootFS(Pipeline):
             cls.scan_for_application_packages,
             cls.match_not_analyzed_to_system_packages,
             cls.scan_for_files,
+            cls.collect_and_create_license_detections,
             cls.analyze_scanned_files,
             cls.flag_not_analyzed_codebase_resources,
         )
@@ -122,6 +123,13 @@ class RootFS(Pipeline):
     def scan_for_files(self):
         """Scan unknown resources for copyrights, licenses, emails, and urls."""
         scancode.scan_for_files(self.project, progress_logger=self.log)
+
+    def collect_and_create_license_detections(self):
+        """
+        Collect and create unique license detections from resources and
+        package data.
+        """
+        scancode.collect_and_create_license_detections(project=self.project)
 
     def analyze_scanned_files(self):
         """Analyze single file scan results for completeness."""

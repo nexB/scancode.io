@@ -1,0 +1,59 @@
+{% extends "scanpipe/base.html" %}
+
+{% block title %}ScanCode.io: {{ project.name }} - License Detections{% endblock %}
+
+{% block content %}
+  <div id="content-header" class="container is-max-widescreen mb-3">
+    {% include 'scanpipe/includes/navbar_header.html' %}
+    <section class="mx-5">
+      <div class="is-flex is-justify-content-space-between">
+        {% include 'scanpipe/includes/breadcrumb.html' with linked_project=True current="License Detections" %}
+        {% include 'scanpipe/includes/search_field.html' with extra_class="is-small" %}
+      </div>
+      {% include 'scanpipe/includes/pagination_header.html' %}
+      {% include 'scanpipe/includes/filters_breadcrumb.html' with filterset=filter only %}
+    </section>
+  </div>
+
+  <div class="container is-fluid mb-3">
+    <table class="table is-bordered is-striped is-narrow is-hoverable is-fullwidth">
+      {% include 'scanpipe/includes/list_view_thead.html' %}
+      <tbody>
+        {% for license_detection in object_list %}
+          <tr class="break-word">
+            <td style="min-width: 300px;" title="{{ license_detection.identifier }}">
+              {# CAUTION: Avoid relying on get_absolute_url to prevent unnecessary query triggers #}
+              <a href="{% url 'license_detail' project.slug license_detection.identifier %}">{{ license_detection.identifier }}</a>
+            </td>
+            <td>
+              <a href="?type={{ license_detection.license_expression }}" class="is-black-link">{{ license_detection.license_expression }}</a>
+            </td>
+            <td>
+                <a href="?type={{ license_detection.license_expression_spdx }}" class="is-black-link">{{ license_detection.license_expression_spdx }}</a>
+            </td>
+            <td>
+              {{ license_detection.detection_count }}
+            </td>
+            {% if display_compliance_alert %}
+              <td>
+                <a href="?compliance_alert={{ package.compliance_alert }}" class="is-black-link">
+                  {{ package.compliance_alert }}
+                </a>
+              </td>
+            {% endif %}
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="42" class="has-text-centered p-3">
+              No Licenses detected. <a href="?">Clear search and filters</a>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    {% if is_paginated %}
+      {% include 'scanpipe/includes/pagination.html' with page_obj=page_obj %}
+    {% endif %}
+  </div>
+{% endblock %}
