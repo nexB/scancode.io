@@ -489,6 +489,9 @@ class ProjectQuerySet(models.QuerySet):
 
         return self.annotate(**annotations)
 
+    def active(self):
+        return self.filter(is_archived=False, is_marked_for_deletion=False)
+
 
 class UUIDTaggedItem(GenericUUIDTaggedItemBase, TaggedItemBase):
     class Meta:
@@ -532,6 +535,7 @@ class Project(UUIDPKModel, ExtraDataFieldMixin, UpdateMixin, models.Model):
     )
     notes = models.TextField(blank=True)
     settings = models.JSONField(default=dict, blank=True)
+    is_marked_for_deletion = models.BooleanField(default=False)
     labels = TaggableManager(through=UUIDTaggedItem)
 
     objects = ProjectQuerySet.as_manager()
@@ -633,6 +637,14 @@ class Project(UUIDPKModel, ExtraDataFieldMixin, UpdateMixin, models.Model):
         self.delete_related_objects()
 
         return super().delete(*args, **kwargs)
+
+    def mark_for_deletion(self):
+        self.update(is_marked_for_deletion=True)
+
+    def delete_in_background(self):
+        # Mark the project for deletion and enqueue background deletion task
+        self.mark_for_deletion()
+        django_rq.enqueue(tasks.background_delete_task, self)
 
     def reset(self, keep_input=True):
         """
