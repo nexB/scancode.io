@@ -55,6 +55,23 @@ services:
       - db
       - web
 
+  purldb_scan_queue_worker:
+    build: .
+    command: wait-for-it --strict --timeout=120 web:8000 -- sh -c "
+        ./manage.py migrate &&
+        ./manage.py purldb-scan-queue-worker --async
+                                             --sleep 3"
+    env_file:
+      - docker.env
+    volumes:
+      - .env:/opt/scancodeio/.env
+      - /etc/scancodeio/:/etc/scancodeio/
+      - workspace:/var/scancodeio/workspace/
+    profiles:
+      - purldb_scan_queue_worker
+    depends_on:
+      - db
+
   nginx:
     image: nginx:alpine
     ports:
