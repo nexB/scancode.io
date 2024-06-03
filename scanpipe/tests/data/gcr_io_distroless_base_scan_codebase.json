@@ -14760,8 +14760,8 @@
       "package_data": [
         {
           "md5": null,
-          "name": "distroless",
-          "purl": "pkg:linux-distro/debian/distroless@11",
+          "name": "debian",
+          "purl": "pkg:linux-distro/distroless/debian@11",
           "sha1": null,
           "type": "linux-distro",
           "holder": null,
@@ -14773,7 +14773,7 @@
           "version": "11",
           "keywords": [],
           "copyright": null,
-          "namespace": "debian",
+          "namespace": "distroless",
           "extra_data": {},
           "qualifiers": {},
           "notice_text": null,

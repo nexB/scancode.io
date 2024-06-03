@@ -102,9 +102,9 @@
   ],
   "packages": [
     {
-      "purl": "pkg:deb/ubuntu/libncurses5@6.1-1ubuntu1.18.04?arch=amd64",
+      "purl": "pkg:deb/debian/libncurses5@6.1-1ubuntu1.18.04?arch=amd64",
       "type": "deb",
-      "namespace": "ubuntu",
+      "namespace": "debian",
       "name": "libncurses5",
       "version": "6.1-1ubuntu1.18.04",
       "qualifiers": "arch=amd64",
@@ -275,7 +275,7 @@
           }
         ]
       },
-      "package_uid": "pkg:deb/ubuntu/libncurses5@6.1-1ubuntu1.18.04?arch=amd64&uuid=fixed-uid-done-for-testing-5642512d1758",
+      "package_uid": "pkg:deb/debian/libncurses5@6.1-1ubuntu1.18.04?arch=amd64&uuid=fixed-uid-done-for-testing-5642512d1758",
       "datasource_ids": [
         "debian_installed_status_db",
         "debian_copyright_in_package",
@@ -292,9 +292,9 @@
       "affected_by_vulnerabilities": []
     },
     {
-      "purl": "pkg:deb/ubuntu/libndp0@1.4-2ubuntu0.16.04.1?arch=amd64",
+      "purl": "pkg:deb/debian/libndp0@1.4-2ubuntu0.16.04.1?arch=amd64",
       "type": "deb",
-      "namespace": "ubuntu",
+      "namespace": "debian",
       "name": "libndp0",
       "version": "1.4-2ubuntu0.16.04.1",
       "qualifiers": "arch=amd64",
@@ -413,7 +413,7 @@
           }
         ]
       },
-      "package_uid": "pkg:deb/ubuntu/libndp0@1.4-2ubuntu0.16.04.1?arch=amd64&uuid=fixed-uid-done-for-testing-5642512d1758",
+      "package_uid": "pkg:deb/debian/libndp0@1.4-2ubuntu0.16.04.1?arch=amd64&uuid=fixed-uid-done-for-testing-5642512d1758",
       "datasource_ids": [
         "debian_installed_status_db",
         "debian_copyright_in_package",
@@ -645,7 +645,7 @@
       "authors": [],
       "package_data": [],
       "for_packages": [
-        "pkg:deb/ubuntu/libncurses5@6.1-1ubuntu1.18.04?arch=amd64&uuid=fixed-uid-done-for-testing-5642512d1758"
+        "pkg:deb/debian/libncurses5@6.1-1ubuntu1.18.04?arch=amd64&uuid=fixed-uid-done-for-testing-5642512d1758"
       ],
       "emails": [],
       "urls": [],
@@ -709,7 +709,7 @@
       "authors": [],
       "package_data": [],
       "for_packages": [
-        "pkg:deb/ubuntu/libndp0@1.4-2ubuntu0.16.04.1?arch=amd64&uuid=fixed-uid-done-for-testing-5642512d1758"
+        "pkg:deb/debian/libndp0@1.4-2ubuntu0.16.04.1?arch=amd64&uuid=fixed-uid-done-for-testing-5642512d1758"
       ],
       "emails": [],
       "urls": [],
@@ -866,7 +866,7 @@
       "authors": [],
       "package_data": [],
       "for_packages": [
-        "pkg:deb/ubuntu/libncurses5@6.1-1ubuntu1.18.04?arch=amd64&uuid=fixed-uid-done-for-testing-5642512d1758"
+        "pkg:deb/debian/libncurses5@6.1-1ubuntu1.18.04?arch=amd64&uuid=fixed-uid-done-for-testing-5642512d1758"
       ],
       "emails": [],
       "urls": [],
@@ -899,7 +899,7 @@
       "authors": [],
       "package_data": [],
       "for_packages": [
-        "pkg:deb/ubuntu/libndp0@1.4-2ubuntu0.16.04.1?arch=amd64&uuid=fixed-uid-done-for-testing-5642512d1758"
+        "pkg:deb/debian/libndp0@1.4-2ubuntu0.16.04.1?arch=amd64&uuid=fixed-uid-done-for-testing-5642512d1758"
       ],
       "emails": [],
       "urls": [],

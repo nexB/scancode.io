@@ -38,20 +38,26 @@ from scanpipe.pipes import flag
 
 logger = logging.getLogger(__name__)
 
-SUPPORTED_DISTROS = [
-    "alpine",
-    "debian",
-    "ubuntu",
-    "rhel",
-    "centos",
-    "fedora",
-    "sles",
-    "opensuse",
-    "opensuse-tumbleweed",
-    "photon",
-    "windows",
-    "rocky",
-]
+
+SUPPORTED_DISTROS_BY_TYPE = {
+    "alpine": "apk",
+    "debian": "deb",
+    "ubuntu": "deb",
+    "rhel": "rpm",
+    "centos": "rpm",
+    "fedora": "rpm",
+    "fedora-modular": "rpm",
+    "sles": "rpm",
+    "opensuse": "rpm",
+    "mariner": "rpm",
+    "opensuse-tumbleweed": "rpm",
+    "photon": "rpm",
+    "windows": "windows-program",
+    "rocky": "rpm",
+}
+
+
+SUPPORTED_DISTROS = list(SUPPORTED_DISTROS_BY_TYPE.keys())
 
 
 class DistroNotFound(Exception):
@@ -198,7 +204,10 @@ def package_getter(root_dir, **kwargs):
 
 
 def _create_system_package(project, purl, package):
-    """Create system package and related resources."""
+    """
+    Return the package object after creating the system package
+    and related resources.
+    """
     created_package = pipes.update_or_create_package(project, package.to_dict())
 
     installed_files = []
@@ -243,6 +252,7 @@ def _create_system_package(project, purl, package):
         missing_resources=missing_resources,
         modified_resources=modified_resources,
     )
+    return created_package
 
 
 def scan_rootfs_for_system_packages(project, rootfs):
@@ -266,12 +276,21 @@ def scan_rootfs_for_system_packages(project, rootfs):
     installed_packages = rootfs.get_installed_packages(package_getter)
 
     created_system_packages = []
-    seen_namespaces = []
     for index, (purl, package) in enumerate(installed_packages):
         logger.info(f"Creating package #{index}: {purl}")
-        created_system_packages.append(package)
-        seen_namespaces.append(package.namespace)
-        _create_system_package(project, purl, package)
+        created_package = _create_system_package(project, purl, package)
+        created_system_packages.append(created_package)
+
+    assign_system_package_namespace(created_system_packages, distro_id)
+
+
+def assign_system_package_namespace(system_packages, distro_id):
+    type_for_distro = SUPPORTED_DISTROS_BY_TYPE.get(distro_id, None)
+    seen_namespaces = [
+        package.namespace
+        for package in system_packages
+        if package and package.namespace
+    ]
 
     namespace_counts = Counter(seen_namespaces)
     # we overwite namespace only when there are multiple
@@ -284,8 +303,14 @@ def scan_rootfs_for_system_packages(project, rootfs):
     # most seen in packages, we update all the package
     # namespaces to the distro_id
     if most_seen_namespace != distro_id:
-        for package in created_system_packages:
-            if package.namespace != distro_id:
+        for package in system_packages:
+            if package.namespace == distro_id:
+                continue
+
+            if type_for_distro and package.type != type_for_distro:
+                continue
+
+            if not package.namespace:
                 package.update(namespace=distro_id)
 
 

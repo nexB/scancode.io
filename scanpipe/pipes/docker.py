@@ -184,7 +184,10 @@ def create_codebase_resources(project, image):
 
 
 def create_system_package(project, purl, package, layer, layer_tag):
-    """Create system package and related resources."""
+    """
+    Return the package object after creating the system package and
+    related resources.
+    """
     package_data = package.to_dict()
     package_data["tag"] = layer_tag
     created_package = pipes.update_or_create_package(project, package_data)
@@ -236,6 +239,7 @@ def create_system_package(project, purl, package, layer, layer_tag):
         missing_resources=missing_resources,
         modified_resources=modified_resources,
     )
+    return created_package
 
 
 def scan_image_for_system_packages(project, image):
@@ -259,11 +263,21 @@ def scan_image_for_system_packages(project, image):
     }
 
     installed_packages = image.get_installed_packages(rootfs.package_getter)
+    created_system_packages = []
     for package_index, (purl, package, layer) in enumerate(installed_packages):
         logger.info(f"Creating package #{package_index}: {purl}")
         layer_index = layer_index_mapping.get(layer.layer_id)
         layer_tag = get_layer_tag(image.image_id, layer.layer_id, layer_index)
-        create_system_package(project, purl, package, layer, layer_tag)
+        created_package = create_system_package(
+            project=project,
+            purl=purl,
+            package=package,
+            layer=layer,
+            layer_tag=layer_tag,
+        )
+        created_system_packages.append(created_package)
+
+    rootfs.assign_system_package_namespace(created_system_packages, distro_id)
 
 
 def flag_whiteout_codebase_resources(project):
