@@ -15,7 +15,7 @@
         </div>
         <div class="column">
           <form method="post" action="{% url 'project_settings' project.slug %}">{% csrf_token %}
-            <div class="panel">
+            <div class="panel is-dark">
               <p id="general" class="panel-heading py-2 is-size-6">General</p>
               <div class="panel-block is-block px-4">
                 <div class="field">
@@ -50,7 +50,7 @@
               </div>
             </div>
 
-            <div class="panel">
+            <div class="panel is-dark">
               <p id="ignored" class="panel-heading py-2 is-size-6">Ignored</p>
               <div class="panel-block is-block px-4">
                 <div class="field">
@@ -79,7 +79,7 @@
               </div>
             </div>
 
-            <div class="panel">
+            <div class="panel is-dark">
               <p id="dejacode" class="panel-heading py-2 is-size-6">DejaCode</p>
               <div class="panel-block is-block px-4">
                 <div class="field">
@@ -103,7 +103,7 @@
               </div>
             </div>
 
-            <div class="panel">
+            <div class="panel is-dark">
               <p id="attribution" class="panel-heading py-2 is-size-6">Attribution</p>
               <div class="panel-block is-block px-4">
                 <div class="field">

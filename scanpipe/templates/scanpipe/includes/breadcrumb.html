@@ -1,7 +1,7 @@
 <nav class="breadcrumb has-succeeds-separator is-medium mb-1" aria-label="breadcrumbs">
   <ul>
     {% if not project %}
-      <li class="is-active"><a href="#" aria-current="page">Projects</a></li>
+      <li class="is-active">Projects</li>
     {% else %}
       <li><a href="{% url 'project_list' %}" class="has-text-grey">Projects</a></li>
       {% if linked_project %}

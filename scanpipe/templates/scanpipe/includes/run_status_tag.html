@@ -1,5 +1,5 @@
 {% if run.status == run.Status.RUNNING or run.status == run.Status.QUEUED %}
-  <span class="tag is-info"
+  <span class="tag is-info is-hoverable"
         hx-get="{% url 'run_status' run.uuid %}?current_status={{ run.status }}{% if display_current_step %}&display_current_step={{ display_current_step }}{% endif %}"
         hx-trigger="load delay:10s"
         hx-swap="outerHTML"
@@ -14,15 +14,15 @@
     {% endif %}
   </span>
 {% elif run.status == run.Status.SUCCESS %}
-  <span class="tag is-success">Success</span>
+  <span class="tag is-success is-hoverable">Success</span>
 {% elif run.status == run.Status.FAILURE %}
-  <span class="tag is-danger">Failure</span>
+  <span class="tag is-danger is-hoverable">Failure</span>
 {% elif run.status == run.Status.STALE %}
-  <span class="tag is-dark">Stale</span>
+  <span class="tag is-dark is-hoverable">Stale</span>
 {% elif run.status == run.Status.STOPPED %}
-  <span class="tag is-danger">Stopped</span>
+  <span class="tag is-danger is-hoverable">Stopped</span>
 {% else %}
-  <span class="tag is-light">Not started</span>
+  <span class="tag is-light is-hoverable">Not started</span>
 {% endif %}
 
 {% if status_changed %}

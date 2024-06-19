@@ -7,17 +7,27 @@
   <div class="navbar-menu">
     <div class="navbar-start">
       <a class="navbar-item" href="{% url 'project_list' %}">
+        <span class="icon mr-1">
+          <i class="fa-solid fa-seedling"></i>
+        </span>
         Projects
       </a>
       <a class="navbar-item" href="https://scancodeio.readthedocs.org/" target="_blank">
+        <span class="icon mr-1">
+          <i class="fa-solid fa-book"></i>
+        </span>
         Documentation
       </a>
       <a class="navbar-item" href="{% url 'project-list' %}">
+        <span class="icon mr-1">
+          <i class="fa-solid fa-plug"></i>
+        </span>
         API
       </a>
     </div>
   </div>
   <div class="navbar-end mr-3">
+    {% include 'scanpipe/includes/navbar_theme_selection.html' %}
     {% if user.is_authenticated %}
       <div class="navbar-item has-dropdown is-hoverable">
         <a class="navbar-link">
