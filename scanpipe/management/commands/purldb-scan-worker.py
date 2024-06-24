@@ -27,6 +27,7 @@ from django.core.management.base import BaseCommand
 
 from scanpipe.management.commands import AddInputCommandMixin
 from scanpipe.management.commands import CreateProjectCommandMixin
+from scanpipe.models import Run
 from scanpipe.pipes import output
 from scanpipe.pipes import purldb
 
@@ -53,20 +54,36 @@ class Command(CreateProjectCommandMixin, AddInputCommandMixin, BaseCommand):
             "0 means no limit. Used only for testing.",
         )
 
+        parser.add_argument(
+            "--max-concurrent-projects",
+            dest="max_concurrent_projects",
+            default=1,
+            action="store",
+            help="Limit the number of Projects that can be run at once.",
+        )
+
     def handle(self, *args, **options):
         self.verbosity = options["verbosity"]
         sleep = options["sleep"]
         run_async = options["async"]
-        max_loops = options["max_loops"]
+        max_loops = int(options["max_loops"])
+        max_concurrent_projects = int(options["max_concurrent_projects"])
 
         loop_count = 0
         while True:
-            if max_loops and int(loop_count) >= int(max_loops):
+            if max_loops and loop_count >= max_loops:
                 self.stdout.write("loop max reached")
                 break
 
             time.sleep(sleep)
             loop_count += 1
+
+            # Usually, a worker can only run one Run at a time
+            queued_and_running = Run.objects.filter(
+                status__in=[Run.Status.QUEUED, Run.Status.RUNNING]
+            )
+            if queued_and_running.count() > max_concurrent_projects:
+                continue
 
             # 1. Get download url from purldb
             response = purldb.get_next_download_url()
@@ -84,6 +101,11 @@ class Command(CreateProjectCommandMixin, AddInputCommandMixin, BaseCommand):
 
             try:
                 # 2. Create and run project
+
+                # Run `send_project_results` to send results back to PurlDB
+                # after all the pipelines have been run.
+                pipelines.append("send_project_results")
+
                 project = create_scan_project(
                     command=self,
                     scannable_uri_uuid=scannable_uri_uuid,
@@ -92,18 +114,8 @@ class Command(CreateProjectCommandMixin, AddInputCommandMixin, BaseCommand):
                     run_async=run_async,
                 )
 
-                # 3. Poll project results
-                purldb.poll_run_status(
-                    project=project,
-                    sleep=sleep,
-                )
-
-                # 4. Get project results and send to PurlDB
-                send_scan_project_results(
-                    project=project, scannable_uri_uuid=scannable_uri_uuid
-                )
                 self.stdout.write(
-                    "Scan results and other data have been sent to PurlDB",
+                    f"Project {project.name} has been created",
                     self.style.SUCCESS,
                 )
 
