@@ -414,3 +414,7 @@ MATCHCODEIO_URL = env.str("MATCHCODEIO_URL", default="")
 MATCHCODEIO_USER = env.str("MATCHCODEIO_USER", default="")
 MATCHCODEIO_PASSWORD = env.str("MATCHCODEIO_PASSWORD", default="")
 MATCHCODEIO_API_KEY = env.str("MATCHCODEIO_API_KEY", default="")
+
+# OpenSSF ScoreCard Integration
+
+SCORECARD_URL = env.str('SCORECARD_URL', default="")
