@@ -24,6 +24,7 @@ import time
 import traceback
 
 from django.core.management.base import BaseCommand
+from django.db.models import Q
 
 from scanpipe.management.commands import AddInputCommandMixin
 from scanpipe.management.commands import CreateProjectCommandMixin
@@ -80,7 +81,7 @@ class Command(CreateProjectCommandMixin, AddInputCommandMixin, BaseCommand):
 
             # Usually, a worker can only run one Run at a time
             queued_and_running = Run.objects.filter(
-                status__in=[Run.Status.QUEUED, Run.Status.RUNNING]
+                Q(task_id__isnull=False) | Q(task_start_date__isnull=False)
             )
             if queued_and_running.count() > max_concurrent_projects:
                 continue
