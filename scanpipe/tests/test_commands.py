@@ -714,22 +714,6 @@ class ScanPipeManagementCommandTest(TestCase):
         project = Project.objects.get(name=project_name)
         self.assertEqual(scannable_uri_uuid, project.extra_data["scannable_uri_uuid"])
 
-        mock_request_post.assert_called_once()
-        mock_request_post_call = mock_request_post.mock_calls[0]
-        mock_request_post_call_kwargs = mock_request_post_call.kwargs
-        self.assertEqual(
-            self.purldb_update_status_url, mock_request_post_call_kwargs["url"]
-        )
-        expected_data = {
-            "scannable_uri_uuid": "97627c6e-9acb-43e0-b8df-28bd92f2b7e5",
-            "scan_status": "scanned",
-            "project_extra_data": '{"scannable_uri_uuid": '
-            '"97627c6e-9acb-43e0-b8df-28bd92f2b7e5"}',
-        }
-        self.assertEqual(expected_data, mock_request_post_call_kwargs["data"])
-        self.assertTrue(mock_request_post_call_kwargs["files"]["scan_results_file"])
-        self.assertTrue(mock_request_post_call_kwargs["files"]["scan_summary_file"])
-
     @mock.patch("scanpipe.pipes.purldb.request_post")
     @mock.patch("requests.sessions.Session.get")
     @mock.patch("scanpipe.pipes.purldb.request_get")

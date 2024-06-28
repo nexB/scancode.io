@@ -436,8 +436,9 @@ def check_project_run_statuses(project, logger=None):
     """
     from scanpipe.models import AbstractTaskFieldsModel
 
-    run_status = AbstractTaskFieldsModel.Status
-    failed_runs = project.runs.filter(status=run_status.FAILURE)
+    failed_runs = project.runs.filter(
+        task_exitcode__isnull=False, task_exitcode__gt=0
+    )
     if failed_runs:
         failure_msgs = []
         for failed_run in failed_runs:
