@@ -47,22 +47,10 @@ class SendProjectResults(Pipeline):
         Scannable URI associated with this Project to `failed` and send back a
         log of the failed runs.
         """
-        run_status = AbstractTaskFieldsModel.Status
-        failed_runs = self.project.runs.filter(status=run_status.FAILURE)
-        if failed_runs:
-            failure_msgs = []
-            for failed_run in failed_runs:
-                msg = f"{failed_run.pipeline_name} failed:\n\n{failed_run.log}\n"
-                failure_msgs.append(msg)
-
-            failure_msg = "\n".join(failure_msgs)
-            self.scannable_uri_uuid = self.project.extra_data.get("scannable_uri_uuid")
-            purldb.update_status(
-                scannable_uri_uuid=self.scannable_uri_uuid,
-                status="failed",
-                scan_log=failure_msg,
-            )
-            self.log(failure_msg)
+        purldb.check_project_run_statuses(
+            project=self.project,
+            logger=self.log,
+        )
 
     def send_project_results(self):
         """
@@ -71,18 +59,7 @@ class SendProjectResults(Pipeline):
 
         Raise a PurlDBException if there is an issue sending results to PurlDB.
         """
-        scan_results_location = output.to_json(self.project)
-        scan_summary_location = self.project.get_latest_output(filename="summary")
-        response = purldb.send_results_to_purldb(
-            self.scannable_uri_uuid,
-            scan_results_location,
-            scan_summary_location,
-            self.project.extra_data,
+        purldb.send_project_results(
+            project=self.project,
+            logger=self.log,
         )
-
-        if not response:
-            raise purldb.PurlDBException(
-                "Bad response returned when sending results to PurlDB"
-            )
-
-        self.log("Scan results and other data have been sent to PurlDB")
