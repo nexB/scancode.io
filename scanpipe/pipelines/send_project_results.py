@@ -20,9 +20,7 @@
 # ScanCode.io is a free software code scanning tool from nexB Inc. and others.
 # Visit https://github.com/nexB/scancode.io for support and download.
 
-from scanpipe.models import AbstractTaskFieldsModel
 from scanpipe.pipelines import Pipeline
-from scanpipe.pipes import output
 from scanpipe.pipes import purldb
 
 

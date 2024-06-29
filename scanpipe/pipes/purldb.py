@@ -24,6 +24,7 @@ import json
 import logging
 
 from django.conf import settings
+from django.db.models import Q
 from django.utils.text import slugify
 
 import requests
@@ -430,14 +431,14 @@ def create_project_name(download_url, scannable_uri_uuid):
 
 def check_project_run_statuses(project, logger=None):
     """
-    If any of the runs of this Project has failed, update the status of the
-    Scannable URI associated with this Project to `failed` and send back a
-    log of the failed runs.
+    If any of the runs of this Project has failed, stopped, or gone stale,
+    update the status of the Scannable URI associated with this Project to
+    `failed` and send back a log of the failed runs.
     """
-    from scanpipe.models import AbstractTaskFieldsModel
-
     failed_runs = project.runs.filter(
-        task_exitcode__isnull=False, task_exitcode__gt=0
+        Q(task_exitcode__isnull=False, task_exitcode__gt=0)
+        | Q(task_exitcode=99)
+        | Q(task_exitcode=88)
     )
     if failed_runs:
         failure_msgs = []
@@ -475,9 +476,7 @@ def send_project_results(project, logger=None):
     )
 
     if not response:
-        raise PurlDBException(
-            "Bad response returned when sending results to PurlDB"
-        )
+        raise PurlDBException("Bad response returned when sending results to PurlDB")
 
     if logger:
         logger("Scan results and other data have been sent to PurlDB")
