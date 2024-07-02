@@ -60,6 +60,7 @@ from scanpipe.models import DiscoveredDependency
 from scanpipe.models import DiscoveredPackage
 from scanpipe.models import Project
 from scanpipe.models import ProjectMessage
+from scanpipe.models import PackageScore
 from scanpipe.models import Run
 from scanpipe.models import RunInProgressError
 from scanpipe.models import RunNotAllowedToStart
@@ -78,6 +79,7 @@ from scanpipe.tests import make_resource_directory
 from scanpipe.tests import make_resource_file
 from scanpipe.tests import mocked_now
 from scanpipe.tests import package_data1
+from scanpipe.tests import scorecard_data
 from scanpipe.tests import package_data2
 from scanpipe.tests.pipelines.do_nothing import DoNothing
 
@@ -2289,6 +2291,22 @@ class ScanPipeModelsTest(TestCase):
         paths = [str(resource.path) for resource in project.codebaseresources.elfs()]
         self.assertTrue("e" in paths)
         self.assertTrue("a" in paths)
+
+    def test_scorecard_models(self):
+
+        package = DiscoveredPackage.create_from_data(self.project1, package_data1)
+
+        package_score = PackageScore.create_from_data(package, scorecard_data, scoring_tool="OSSF")
+
+        self.assertIsNotNone(package_score)
+        self.assertEqual(package_score.scoring_tool, "OSSF")
+        self.assertEqual(package_score.score, "6.7")
+
+        checks = package_score.discovered_packages_score_checks.all()
+        self.assertEqual(checks.count(), 14)
+        self.assertEqual(checks[0].check_name, 'Code-Review')
+        self.assertEqual(checks[0].check_score, '1')
+
 
 
 class ScanPipeModelsTransactionTest(TransactionTestCase):
