@@ -12,7 +12,7 @@
         <div>
           {% include 'scanpipe/includes/project_labels.html' with labels=project.labels.all only %}
         </div>
-        <span class="has-text-grey is-size-7 is-block" title="{{ project.created_date|date:'N j, Y, P T' }}">Created {{ project.created_date|naturaltime }}</span>
+        <span class="has-text-grey is-size-7 is-block" title="{{ project.created_date|naturaltime }}">Created {{ project.created_date|date:'Y-m-d H:i'  }}</span>
       </th>
       <td>
         {% if project.discoveredpackages_count %}
