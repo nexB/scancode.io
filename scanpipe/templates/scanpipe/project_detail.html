@@ -37,7 +37,7 @@
         </div>
       </div>
       <div style="min-width:fit-content;">
-        <a href="{% url 'project_settings' project.slug %}" class="button is-smaller is-info is-outlined">
+        <a href="{% url 'project_settings' project.slug %}" class="button is-smaller">
           <span class="icon width-1">
             <i class="fa-solid fa-sliders-h"></i>
           </span>
@@ -108,7 +108,7 @@
       </div>
 
       {% if project.extra_data %}
-        <article id="project-extra-data" class="panel is-info">
+        <article id="project-extra-data" class="panel is-dark">
           <p class="panel-heading py-2 is-size-6">
             Project data
           </p>

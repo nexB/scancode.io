@@ -6,9 +6,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}ScanCode.io{% endblock %}</title>
     <link rel="icon" href="{% static 'favicon.ico' %}">
-    <link rel="stylesheet" href="{% static 'bulma-0.9.4.min.css' %}" crossorigin="anonymous">
+    <link rel="stylesheet" href="{% static 'bulma-1.0.1.min.css' %}" crossorigin="anonymous">
     <link rel="stylesheet" href="{% static 'highlight-10.6.0.css' %}" crossorigin="anonymous">
     <style>
+      :root {
+        --bulma-link-h: 229deg;
+        --bulma-link-s: 53%;
+        --bulma-link-l: 53%;
+      }
+      .theme-dark, [data-theme=dark] {
+        [class*=has-background-light], [class*=is-background-light] {--bulma-background-l: var(--bulma-light-invert-l);}
+      }
+      .modal {
+        --bulma-modal-card-head-padding: 1.25rem;
+        --bulma-modal-card-body-padding: 1.25rem;
+        --bulma-modal-card-head-radius: var(--bulma-radius-medium);
+      }
+      .modal-card-head {
+        background-color: var(--bulma-scheme-main-bis);
+      }
+      .title {
+        --bulma-title-weight: var(--bulma-weight-semibold);
+      }
+      .heading {display: block; font-size: 11px; letter-spacing: 1px; margin-bottom: 5px; text-transform: uppercase;}
+      .is-black-link {color: var(--bulma-text-strong)}
       .width-100, .select, .select select {width: 100%;}
       .width-1 {width: 1rem !important;}
       .height-1 {height: 1rem !important;}
@@ -21,7 +42,7 @@
       .border-bottom-radius {border-bottom-left-radius: 6px; border-bottom-right-radius: 6px;}
       .tabs .border-left-radius {border-bottom-left-radius: 4px; border-top-left-radius: 4px;}
       .tab-content pre {border-radius: 4px;}
-      .tabs a.is-disabled {pointer-events: none; cursor: default; color: #b5b5b5;}
+      .tabs a.is-disabled {pointer-events: none; cursor: not-allowed; color: var(--bulma-text-weak);}
       .border-no-top-left-radius {border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; border-top-right-radius: 6px;}
       .border-dashed {border-width: 2px; border-style: dashed; border-color: rgb(229, 231, 235);}
       .is-height-auto {height: auto;}
@@ -35,7 +56,6 @@
       .highlight {width: 100%;}
       .log pre {background-color: #1c1d21;}
       .is-cursor-help {cursor: help;}
-      .is-black-link {color: #363636;}
       .is-grey-link {color: #7a7a7a;}
       .is-black-link:hover, .is-grey-link:hover {color: #3273dc; text-decoration: underline;}
       .navbar button.navbar-item {font-size: 1em;}

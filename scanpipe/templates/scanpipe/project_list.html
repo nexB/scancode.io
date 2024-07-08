@@ -9,7 +9,7 @@
     ul#id_is_archived li {margin-right: 1rem;}
     ul#id_is_archived li a {color: #7a7a7a;}
     ul#id_is_archived li a:hover {text-decoration: underline;}
-    ul#id_is_archived li a.is-active {color: #363636;}
+    ul#id_is_archived li a.is-active {color: var(--bulma-text);}
   </style>
 {% endblock %}
 
@@ -29,7 +29,7 @@
             </a>
           {% endif %}
         </div>
-        <a href="{% url 'project_add' %}" class="button is-smaller is-link">New Project</a>
+        <a href="{% url 'project_add' %}" class="button is-smaller is-link" style="height:fit-content;">New Project</a>
       </div>
 
       <div class="is-flex mb-3">
@@ -47,17 +47,13 @@
       {% if object_list %}
         {% include 'scanpipe/includes/project_list_table.html' with projects=object_list %}
       {% else %}
-        <div class="tile is-ancestor">
-          <div class="tile is-parent">
-            <article class="tile is-child box has-text-centered border-dashed">
-              {% if filter.is_active %}
-                No Projects found. <a href="{% url 'project_list' %}">Clear search and filters</a>
-              {% else %}
-                <a href="{% url 'project_add' %}">New Project</a>
-              {% endif %}
-            </article>
-          </div>
-        </div>
+        <article class="box has-text-centered border-dashed">
+          {% if filter.is_active %}
+            No Projects found. <a href="{% url 'project_list' %}">Clear search and filters</a>
+          {% else %}
+            <a href="{% url 'project_add' %}">New Project</a>
+          {% endif %}
+        </article>
       {% endif %}
 
       {% if is_paginated %}
