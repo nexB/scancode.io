@@ -30,6 +30,11 @@
                   <i class="fa-solid fa-bug fa-sm has-text-danger" title="Vulnerabilities"></i>
                 </a>
               {% endif %}
+              {% if package.has_compliance_alert %}
+                <a href="{% url 'package_detail' project.slug package.uuid %}#terms">
+                  <i class="fa-solid fa-scale-balanced fa-sm has-text-danger" title="License Compliance Error"></i>
+                </a>
+              {% endif %}
             </td>
             <td style="min-width: 300px; max-width: 400px;">
               <a href="?declared_license_expression={{ package.declared_license_expression }}" class="is-black-link">

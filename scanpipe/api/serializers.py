@@ -31,6 +31,7 @@ from scanpipe.api import ExcludeFromListViewMixin
 from scanpipe.models import CodebaseRelation
 from scanpipe.models import CodebaseResource
 from scanpipe.models import DiscoveredDependency
+from scanpipe.models import DiscoveredLicense
 from scanpipe.models import DiscoveredPackage
 from scanpipe.models import InputSource
 from scanpipe.models import Project
@@ -439,6 +440,20 @@ class DiscoveredDependencySerializer(serializers.ModelSerializer):
         ]
 
 
+class DiscoveredLicenseSerializer(serializers.ModelSerializer):
+    compliance_alert = serializers.CharField()
+
+    class Meta:
+        model = DiscoveredLicense
+        fields = [
+            "detection_count",
+            "identifier",
+            "license_expression",
+            "license_expression_spdx",
+            "compliance_alert",
+        ]
+
+
 class CodebaseRelationSerializer(serializers.ModelSerializer):
     from_resource = serializers.ReadOnlyField(source="from_resource.path")
     to_resource = serializers.ReadOnlyField(source="to_resource.path")
@@ -497,6 +512,7 @@ def get_model_serializer(model_class):
         CodebaseResource: CodebaseResourceSerializer,
         DiscoveredPackage: DiscoveredPackageSerializer,
         DiscoveredDependency: DiscoveredDependencySerializer,
+        DiscoveredLicense: DiscoveredLicenseSerializer,
         CodebaseRelation: CodebaseRelationSerializer,
         ProjectMessage: ProjectMessageSerializer,
     }.get(model_class, None)

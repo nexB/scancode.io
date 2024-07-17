@@ -1,0 +1,87 @@
+<div class="content">
+    <table class="table is-bordered is-striped is-narrow is-hoverable is-fullwidth">
+      <thead>
+        <tr>
+          <th>Datafile Paths</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for path in tab_data.fields.datafile_paths.value %}
+        <tr>
+            <td class="break-all">
+                <a href="{% url 'resource_detail' project.slug path %}">{{ path }}</a>
+            </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <table class="table is-bordered is-striped is-narrow is-hoverable is-fullwidth">
+        <thead>
+          <tr>
+            <th>Datasource IDs</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for id in tab_data.fields.datasource_ids.value %}
+          <tr>
+              <td class="break-all">
+                  {{ id }}
+              </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+    </table>
+    {% if tab_data.fields.license_detections.value %}
+    <table class="table is-bordered is-striped is-narrow is-hoverable is-fullwidth">
+        <thead>
+          <tr>
+            <th>License Detections</th>
+            <th>License Expression</th>
+            <th>License Expression SPDX</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for detection in tab_data.fields.license_detections.value %}
+          <tr>
+              <td class="break-all">
+                  <a href="{% url 'license_detail' project.slug detection.identifier %}">{{ detection.identifier }}</a>
+              </td>
+              <td class="break-all">
+                  {{ detection.license_expression }}
+              </td>
+              <td class="break-all">
+                  {{ detection.license_expression_spdx }}
+              </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+    {% if tab_data.fields.other_license_detections.value %}
+    <table class="table is-bordered is-striped is-narrow is-hoverable is-fullwidth">
+        <thead>
+          <tr>
+            <th>License Detections</th>
+            <th>License Expression</th>
+            <th>License Expression SPDX</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for detection in tab_data.fields.other_license_detections.value %}
+          <tr>
+              <td class="break-all">
+                  <a href="{% url 'license_detail' project.slug detection.identifier %}">{{ detection.identifier }}</a>
+                  
+              </td>
+              <td class="break-all">
+                  {{ detection.license_expression }}
+              </td>
+              <td class="break-all">
+                  {{ detection.license_expression_spdx }}
+              </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+  </div>

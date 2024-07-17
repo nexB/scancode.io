@@ -66,6 +66,7 @@ from scancodeio.auth import conditional_login_required
 from scanpipe.api.serializers import DiscoveredDependencySerializer
 from scanpipe.filters import PAGE_VAR
 from scanpipe.filters import DependencyFilterSet
+from scanpipe.filters import LicenseFilterSet
 from scanpipe.filters import PackageFilterSet
 from scanpipe.filters import ProjectFilterSet
 from scanpipe.filters import ProjectMessageFilterSet
@@ -83,6 +84,7 @@ from scanpipe.forms import ProjectSettingsForm
 from scanpipe.models import CodebaseRelation
 from scanpipe.models import CodebaseResource
 from scanpipe.models import DiscoveredDependency
+from scanpipe.models import DiscoveredLicense
 from scanpipe.models import DiscoveredPackage
 from scanpipe.models import InputSource
 from scanpipe.models import Project
@@ -171,12 +173,12 @@ LICENSE_CLARITY_FIELDS = [
 
 
 SCAN_SUMMARY_FIELDS = [
-    ("Declared license", "declared_license_expression"),
-    ("Declared holder", "declared_holder"),
-    ("Primary language", "primary_language"),
-    ("Other licenses", "other_license_expressions"),
-    ("Other holders", "other_holders"),
-    ("Other languages", "other_languages"),
+    "declared_license_expression",
+    "declared_holder",
+    "primary_language",
+    "other_license_expressions",
+    "other_holders",
+    "other_languages",
 ]
 
 
@@ -315,7 +317,9 @@ class TabSetMixin:
         """
         Return the formatted value of the specified `field_name` from the object.
 
-        By default, JSON types (list and dict) are rendered as YAML.
+        By default, JSON types (list and dict) are rendered as YAML,
+        except some fields which are used for a more complex tabular
+        representation with links to other views.
         If a `render_func` is provided, it will take precedence and be used for
         rendering the value.
         """
@@ -327,9 +331,23 @@ class TabSetMixin:
         if isinstance(field_value, Manager):
             return list(field_value.all())
 
+        # We need these as mappings
+        detection_fields = [
+            "license_detections",
+            "other_license_detections",
+            "license_clues",
+            "matches",
+            "file_regions",
+            "urls",
+            "emails",
+            "datafile_paths",
+            "datasource_ids",
+        ]
+
         if isinstance(field_value, (list, dict)):
-            with suppress(Exception):
-                field_value = render_as_yaml(field_value)
+            if field_name not in detection_fields:
+                with suppress(Exception):
+                    field_value = render_as_yaml(field_value)
 
         return field_value
 
@@ -636,11 +654,12 @@ class ProjectDetailView(ConditionalLoginRequired, generic.DetailView):
         ]
 
     @staticmethod
-    def get_scan_summary_data(scan_summary_json):
+    def get_scan_summary_data(project, scan_summary_json):
         summary_data = {}
 
-        for field_label, field_name in SCAN_SUMMARY_FIELDS:
-            field_data = scan_summary_json.get(field_name)
+        for field_name, field_data in scan_summary_json.items():
+            if field_name not in SCAN_SUMMARY_FIELDS:
+                continue
 
             if type(field_data) is list:
                 # Do not include `None` entries
@@ -649,7 +668,13 @@ class ProjectDetailView(ConditionalLoginRequired, generic.DetailView):
                 # Converts single value type into common data-structure
                 values = [{"value": field_data}]
 
-            summary_data[field_label] = values
+            summary_data[field_name] = values
+
+        key_files = project.codebaseresources.filter(is_key_file=True)
+        summary_data["key_file_licenses"] = {
+            key_file.path: key_file.detected_license_expression
+            for key_file in key_files
+        }
 
         return summary_data
 
@@ -707,7 +732,7 @@ class ProjectDetailView(ConditionalLoginRequired, generic.DetailView):
             with suppress(json.decoder.JSONDecodeError):
                 scan_summary_json = json.loads(scan_summary_file.read_text())
                 license_clarity = self.get_license_clarity_data(scan_summary_json)
-                scan_summary = self.get_scan_summary_data(scan_summary_json)
+                scan_summary = self.get_scan_summary_data(project, scan_summary_json)
 
         codebase_root = sorted(
             project.codebase_path.glob("*"),
@@ -955,42 +980,57 @@ class ProjectResourceStatusSummaryView(ConditionalLoginRequired, generic.DetailV
         return context
 
 
-class ProjectResourceLicenseSummaryView(ConditionalLoginRequired, generic.DetailView):
+class ProjectLicenseDetectionSummaryView(ConditionalLoginRequired, generic.DetailView):
     model = Project
-    template_name = "scanpipe/panels/resource_license_summary.html"
+    template_name = "scanpipe/panels/license_detections_summary.html"
 
     @staticmethod
-    def get_resource_license_summary(project, limit=10):
+    def get_license_detection_summary(project, limit=10):
         license_counter = count_group_by(
-            project.codebaseresources.files(), "detected_license_expression"
+            project.discoveredlicenses, "license_expression"
         )
 
         if list(license_counter.keys()) == [""]:
-            return
+            return None, None, None
 
         # Order the license list by the number of detections, higher first
         sorted_by_count = dict(
             sorted(license_counter.items(), key=operator.itemgetter(1), reverse=True)
         )
 
-        # Remove the "no licenses" entry from the top list
-        no_licenses = sorted_by_count.pop("", None)
-
         # Keep the top entries
         top_licenses = dict(list(sorted_by_count.items())[:limit])
 
-        # Add the "no licenses" entry at the end
-        if no_licenses:
-            top_licenses[""] = no_licenses
+        # Also get count for detections with
+        expressions_with_compliance_alert = []
+        for license_expression in top_licenses.keys():
+            has_compliance_alert = (
+                project.discoveredlicenses.filter(license_expression=license_expression)
+                .has_compliance_alert()
+                .exists()
+            )
+            if has_compliance_alert:
+                expressions_with_compliance_alert.append(license_expression)
 
-        return top_licenses
+        total_counts = {
+            "with_compliance_error": (
+                project.discoveredlicenses.has_compliance_alert().count()
+            ),
+            "all": project.discoveredlicenses.count(),
+        }
+
+        return top_licenses, expressions_with_compliance_alert, total_counts
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        summary = self.get_resource_license_summary(project=self.object)
-        context["resource_license_summary"] = summary
-        context["project_resources_url"] = reverse(
-            "project_resources", args=[self.object.slug]
+        summary, expressions, counts = self.get_license_detection_summary(
+            project=self.object
+        )
+        context["license_detection_summary"] = summary
+        context["expressions_with_compliance_alert"] = expressions
+        context["total_counts"] = counts
+        context["project_licenses_url"] = reverse(
+            "project_licenses", args=[self.object.slug]
         )
         return context
 
@@ -1571,6 +1611,54 @@ class DiscoveredDependencyListView(
         return super().get_queryset().order_by("dependency_uid")
 
 
+class DiscoveredLicenseListView(
+    ConditionalLoginRequired,
+    ProjectRelatedViewMixin,
+    TableColumnsMixin,
+    ExportXLSXMixin,
+    PaginatedFilterView,
+):
+    model = DiscoveredLicense
+    filterset_class = LicenseFilterSet
+    template_name = "scanpipe/license_detection_list.html"
+    paginate_by = settings.SCANCODEIO_PAGINATE_BY.get("license", 10)
+    table_columns = [
+        "identifier",
+        {
+            "field_name": "license_expression",
+            "filter_fieldname": "license_expression",
+        },
+        {
+            "field_name": "license_expression_spdx",
+            "filter_fieldname": "license_expression_spdx",
+        },
+        "detection_count",
+        {
+            "field_name": "compliance_alert",
+            "condition": scanpipe_app.policies_enabled,
+            "filter_fieldname": "compliance_alert",
+        },
+    ]
+
+    def get_queryset(self):
+        return (
+            super()
+            .get_queryset()
+            .only(
+                "detection_count",
+                "license_expression",
+                "license_expression_spdx",
+                "compliance_alert",
+            )
+            .order_by_count_and_expression()
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["display_compliance_alert"] = scanpipe_app.policies_enabled
+        return context
+
+
 class ProjectMessageListView(
     ConditionalLoginRequired,
     ProjectRelatedViewMixin,
@@ -1717,23 +1805,24 @@ class CodebaseResourceDetailsView(
             "disable_condition": do_not_disable,
             "display_condition": is_displayable_image_type,
         },
-        "detection": {
+        "terms": {
             "fields": [
                 "detected_license_expression",
                 {
                     "field_name": "detected_license_expression_spdx",
                     "label": "Detected license expression (SPDX)",
                 },
-                "license_detections",
-                "license_clues",
                 "percentage_of_license_text",
-                "copyrights",
-                "holders",
-                "authors",
-                "emails",
-                "urls",
+                {"field_name": "copyrights", "render_func": render_as_yaml},
+                {"field_name": "holders", "render_func": render_as_yaml},
+                {"field_name": "authors", "render_func": render_as_yaml},
             ],
+            "icon_class": "fa-solid fa-file-contract",
+        },
+        "detection": {
+            "fields": ["license_detections", "license_clues", "emails", "urls"],
             "icon_class": "fa-solid fa-search",
+            "template": "scanpipe/tabset/tab_resource_detections.html",
         },
         "packages": {
             "fields": ["discovered_packages"],
@@ -1925,10 +2014,18 @@ class DiscoveredPackageDetailsView(
                 "copyright",
                 "holder",
                 "notice_text",
+            ],
+            "icon_class": "fa-solid fa-file-contract",
+        },
+        "detection": {
+            "fields": [
+                "datasource_ids",
+                "datafile_paths",
                 "license_detections",
                 "other_license_detections",
             ],
-            "icon_class": "fa-solid fa-file-contract",
+            "icon_class": "fa-solid fa-search",
+            "template": "scanpipe/tabset/tab_package_detections.html",
         },
         "resources": {
             "fields": ["codebase_resources"],
@@ -2083,6 +2180,35 @@ class DiscoveredDependencyDetailsView(
         context = super().get_context_data(**kwargs)
         context["dependency_data"] = DiscoveredDependencySerializer(self.object).data
         return context
+
+
+class DiscoveredLicenseDetailsView(
+    ConditionalLoginRequired,
+    ProjectRelatedViewMixin,
+    TabSetMixin,
+    generic.DetailView,
+):
+    model = DiscoveredLicense
+    model_label = "license_detections"
+    slug_field = "identifier"
+    slug_url_kwarg = "identifier"
+    template_name = "scanpipe/license_detection_detail.html"
+    tabset = {
+        "essentials": {
+            "fields": [
+                "license_expression",
+                "license_expression_spdx",
+                "identifier",
+                "detection_count",
+            ],
+            "icon_class": "fa-solid fa-info-circle",
+        },
+        "detection": {
+            "fields": ["matches", "detection_log", "file_regions"],
+            "icon_class": "fa-solid fa-search",
+            "template": "scanpipe/tabset/tab_license_detections.html",
+        },
+    }
 
 
 @conditional_login_required

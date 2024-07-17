@@ -6,15 +6,80 @@
   </div>
   <div class="panel-block p-0">
     <table class="table is-fullwidth border-bottom-radius">
-      {% for field_label, values in scan_summary.items %}
-        <tr>
-          <th class="is-narrow">
-            {{ field_label }}
-          </th>
-          <td>
-            <ul>
-              {% for entry in values %}
-                {% if entry.value %}
+      <tr>
+        <th class="is-narrow">
+          Declared license
+        </th>
+        <td>
+          <ul>
+            {% for entry in scan_summary.declared_license_expression %}
+              {% if entry.value %}
+                <li>
+                  {{ entry.value }}
+                  {% if entry.count %}
+                    <span class="tag is-rounded">
+                      {{ entry.count|intcomma }}
+                    </span>
+                  {% endif %}
+                </li>
+              {% endif %}
+            {% endfor %}
+          </ul>
+        </td>
+      </tr>
+      <tr>
+        <th class="is-narrow">
+          Declared holder
+        </th>
+        <td>
+          <ul>
+            {% for entry in scan_summary.declared_holder %}
+              {% if entry.value %}
+                <li>
+                  {{ entry.value }}
+                  {% if entry.count %}
+                    <span class="tag is-rounded">
+                      {{ entry.count|intcomma }}
+                    </span>
+                  {% endif %}
+                </li>
+              {% endif %}
+            {% endfor %}
+          </ul>
+        </td>
+      </tr>
+      <tr>
+        <th class="is-narrow">
+          Primary language
+        </th>
+        <td>
+          <ul>
+            {% for entry in scan_summary.primary_language %}
+              {% if entry.value %}
+                <li>
+                  <a href="{% url 'project_resources' project.slug %}?programming_language={{ entry.value }}" target="_blank">
+                  {{ entry.value }}
+                  {% if entry.count %}
+                    <span class="tag is-rounded">
+                      {{ entry.count|intcomma }}
+                    </span>
+                  {% endif %}
+                  </a>
+                </li>
+              {% endif %}
+            {% endfor %}
+          </ul>
+        </td>
+      </tr>
+      <tr>
+        <th class="is-narrow">
+          Other licenses
+        </th>
+        <td>
+          <ul>
+            {% for entry in scan_summary.other_license_expressions %}
+              {% if entry.value %}
+                <a href="{% url 'project_licenses' project.slug %}?license_expression={{ entry.value }}" target="_blank">
                   <li>
                     {{ entry.value }}
                     {% if entry.count %}
@@ -23,12 +88,79 @@
                       </span>
                     {% endif %}
                   </li>
-                {% endif %}
-              {% endfor %}
-            </ul>
-          </td>
-        </tr>
-      {% endfor %}
+                </a>
+              {% endif %}
+            {% endfor %}
+          </ul>
+        </td>
+      </tr>
+      <tr>
+        <th class="is-narrow">
+          Other holders
+        </th>
+        <td>
+          <ul>
+            {% for entry in scan_summary.other_holders %}
+              {% if entry.value %}
+                <li>
+                  {{ entry.value }}
+                  {% if entry.count %}
+                    <span class="tag is-rounded">
+                      {{ entry.count|intcomma }}
+                    </span>
+                  {% endif %}
+                </li>
+              {% endif %}
+            {% endfor %}
+          </ul>
+        </td>
+      </tr>
+      <tr>
+        <th class="is-narrow">
+          Other languages
+        </th>
+        <td>
+          <ul>
+            {% for entry in scan_summary.other_languages %}
+              {% if entry.value %}
+                <a href="{% url 'project_resources' project.slug %}?programming_language={{ entry.value }}" target="_blank">
+                  <li>
+                    {{ entry.value }}
+                    {% if entry.count %}
+                      <span class="tag is-rounded">
+                        {{ entry.count|intcomma }}
+                      </span>
+                    {% endif %}
+                  </li>
+                </a>
+              {% endif %}
+            {% endfor %}
+          </ul>
+        </td>
+      </tr>
+      <tr>
+        <th class="is-narrow">
+          Key Files
+        </th>
+        <td>
+          <ul>
+            {% for path, license in scan_summary.key_file_licenses.items %}
+              {% if path %}
+                <a href="{% url 'resource_detail' project.slug path %}#detection" target="_blank">
+                  <li>
+                    {{ path }}
+                    {% if license %}
+                      <span class="tag is-rounded">
+                        {{ license }}
+                      </span>
+                    {% endif %}
+                  </li>
+                </a>
+              {% endif %}
+            {% endfor %}
+          </ul>
+        </td>
+      </tr>
     </table>
   </div>
 </article>

@@ -42,6 +42,7 @@ class Docker(RootFS):
             cls.flag_ignored_resources,
             cls.scan_for_application_packages,
             cls.scan_for_files,
+            cls.collect_and_create_license_detections,
             cls.analyze_scanned_files,
             cls.flag_not_analyzed_codebase_resources,
         )

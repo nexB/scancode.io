@@ -640,6 +640,7 @@ class Project(UUIDPKModel, ExtraDataFieldMixin, UpdateMixin, models.Model):
             self.projectmessages,
             self.codebaserelations,
             self.discovereddependencies,
+            self.discoveredlicenses,
             self.codebaseresources,
             self.runs,
         ]
@@ -1358,6 +1359,35 @@ class Project(UUIDPKModel, ExtraDataFieldMixin, UpdateMixin, models.Model):
         return self.discovereddependencies.count()
 
     @cached_property
+    def license_detections_count(self):
+        """Return the number of license detections in this project."""
+        return self.discoveredlicenses.count()
+
+    @cached_property
+    def package_compliance_alert_count(self):
+        """
+        Return the number of packages related to this project which have
+        a license compliance error alert.
+        """
+        return self.discoveredpackages.has_compliance_alert().count()
+
+    @cached_property
+    def license_compliance_alert_count(self):
+        """
+        Return the number of license detections related to this project
+        which have a license compliance error alert.
+        """
+        return self.discoveredlicenses.has_compliance_alert().count()
+
+    @cached_property
+    def resource_compliance_alert_count(self):
+        """
+        Return the number of codebase resources related to this project which have
+        a license compliance error alert.
+        """
+        return self.codebaseresources.has_compliance_alert().count()
+
+    @cached_property
     def message_count(self):
         """Return the number of messages related to this project."""
         return self.projectmessages.count()
@@ -2026,7 +2056,15 @@ def convert_glob_to_django_regex(glob_pattern):
     return escaped_pattern
 
 
-class CodebaseResourceQuerySet(ProjectRelatedQuerySet):
+class ComplianceAlertQuerySetMixin:
+    def has_compliance_alert(self):
+        return self.filter(Q(compliance_alert__exact=CodebaseResource.Compliance.ERROR))
+
+
+class CodebaseResourceQuerySet(
+    ComplianceAlertQuerySetMixin,
+    ProjectRelatedQuerySet,
+):
     def prefetch_for_serializer(self):
         """
         Optimized prefetching for a QuerySet to be consumed by the
@@ -2319,6 +2357,17 @@ class ComplianceAlertMixin(models.Model):
 
     class Meta:
         abstract = True
+
+    @property
+    def has_compliance_alert(self):
+        """
+        Returns True if this instance has a compliance alert of `ERROR`
+        for it's respective license_expression fields.
+        """
+        if self.compliance_alert == self.Compliance.ERROR:
+            return True
+
+        return False
 
     @classmethod
     def from_db(cls, db, field_names, values):
@@ -2919,7 +2968,10 @@ class VulnerabilityQuerySetMixin:
 
 
 class DiscoveredPackageQuerySet(
-    VulnerabilityQuerySetMixin, PackageURLQuerySetMixin, ProjectRelatedQuerySet
+    VulnerabilityQuerySetMixin,
+    ComplianceAlertQuerySetMixin,
+    PackageURLQuerySetMixin,
+    ProjectRelatedQuerySet,
 ):
     def with_resources_count(self):
         count_subquery = Subquery(
@@ -2929,6 +2981,12 @@ class DiscoveredPackageQuerySet(
             output_field=IntegerField(),
         )
         return self.annotate(resources_count=count_subquery)
+
+    def has_license_detections(self):
+        return self.filter(~Q(license_detections=[]) | ~Q(other_license_detections=[]))
+
+    def has_no_license_detections(self):
+        return self.filter(Q(license_detections=[]) & Q(other_license_detections=[]))
 
     def only_package_url_fields(self):
         """
@@ -3799,6 +3857,180 @@ class DiscoveredDependency(
             version=self.version,
             external_refs=external_refs,
         )
+
+
+class DiscoveredLicenseQuerySet(
+    ComplianceAlertQuerySetMixin,
+    ProjectRelatedQuerySet,
+):
+    def order_by_count_and_expression(self):
+        """Order by detection count and license expression (identifer) fields."""
+        return self.order_by("-detection_count", "identifier")
+
+
+class AbstractLicenseDetection(models.Model):
+    """
+    These fields should be kept in line with
+    `licensedcode.detection.LicenseDetection`.
+    """
+
+    license_expression = models.TextField(
+        blank=True,
+        help_text=_(
+            "A license expression string using the SPDX license expression"
+            " syntax and ScanCode license keys, the effective license expression"
+            " for this license detection."
+        ),
+    )
+
+    license_expression_spdx = models.TextField(
+        blank=True,
+        help_text=_("SPDX license expression string with SPDX ids."),
+    )
+
+    matches = models.JSONField(
+        _("Reference Matches"),
+        default=list,
+        blank=True,
+        help_text=_("List of license matches combined in this detection."),
+    )
+
+    detection_log = models.JSONField(
+        default=list,
+        blank=True,
+        help_text=_(
+            "A list of detection DetectionRule explaining how "
+            "this detection was created."
+        ),
+    )
+
+    identifier = models.CharField(
+        max_length=1024,
+        blank=True,
+        help_text=_(
+            "An identifier unique for a license detection, containing the license "
+            "expression and a UUID crafted from the match contents."
+        ),
+    )
+
+    class Meta:
+        abstract = True
+
+
+class DiscoveredLicense(
+    ProjectRelatedModel,
+    SaveProjectMessageMixin,
+    UpdateFromDataMixin,
+    ComplianceAlertMixin,
+    AbstractLicenseDetection,
+):
+    """
+    A project's Discovered Licenses are the unique License Detection objects
+    discovered in the code under analysis.
+    """
+
+    license_expression_field = "license_expression"
+
+    # If this license was discovered in a extracted license statement
+    # this is True, and False if this was discovered in a file.
+    from_package = None
+
+    detection_count = models.BigIntegerField(
+        blank=True,
+        null=True,
+        help_text=_("Total number of this license detection discovered."),
+    )
+
+    file_regions = models.JSONField(
+        _("Detection Locations"),
+        default=list,
+        blank=True,
+        help_text=_(
+            "A list of file regions with resource path, start and end line "
+            "details for each place this license detection was discovered at. "
+            "Also contains whether this license was discovered from a file or "
+            "from package metadata."
+        ),
+    )
+
+    objects = DiscoveredLicenseQuerySet.as_manager()
+
+    class Meta:
+        ordering = ["detection_count", "identifier"]
+        indexes = [
+            models.Index(fields=["identifier"]),
+            models.Index(fields=["license_expression"]),
+            models.Index(fields=["license_expression_spdx"]),
+            models.Index(fields=["detection_count"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["project", "identifier"],
+                condition=~Q(identifier=""),
+                name="%(app_label)s_%(class)s_unique_license_id_within_project",
+            ),
+        ]
+
+    def __str__(self):
+        return self.identifier
+
+    @classmethod
+    def create_from_data(cls, project, detection_data):
+        """
+        Create and returns a DiscoveredLicense for a `project` from the
+        `detection_data`. If one of the values of the required fields is not
+        available, a "ProjectMessage" is created instead of a new
+        DiscoveredLicense instance.
+        """
+        detection_data = detection_data.copy()
+        required_fields = ["license_expression", "identifier", "matches"]
+        missing_values = [
+            field_name
+            for field_name in required_fields
+            if not detection_data.get(field_name)
+        ]
+
+        if missing_values:
+            message = (
+                f"No values for the following required fields: "
+                f"{', '.join(missing_values)}"
+            )
+
+            project.add_warning(
+                description=message,
+                model=cls,
+                details=detection_data,
+            )
+            return
+
+        cleaned_data = {
+            field_name: value
+            for field_name, value in detection_data.items()
+            if field_name in cls.model_fields() and value not in EMPTY_VALUES
+        }
+
+        discovered_license = cls(project=project, **cleaned_data)
+        # Using save_error=False to not capture potential errors at this level but
+        # rather in the CodebaseResource.create_and_add_license_data method so
+        # resource data can be injected in the ProjectMessage record.
+        discovered_license.save(save_error=False, capture_exception=False)
+        return discovered_license
+
+    def update_with_file_region(self, file_region, count_detection):
+        """
+        If the `file_region` is a new file region, include it in the
+        `file_regions` list and increase the `detection_count` by 1.
+        """
+        file_region_data = file_region.to_dict()
+        if file_region_data not in self.file_regions:
+            self.file_regions.append(file_region_data)
+            if count_detection:
+                if not self.detection_count:
+                    self.detection_count = 1
+                else:
+                    self.detection_count += 1
+
+            self.save(update_fields=["detection_count", "file_regions"])
 
 
 def normalize_package_url_data(purl_mapping, ignore_nulls=False):

@@ -104,7 +104,7 @@
 
       <div class="columns">
         <div hx-get="{% url 'project_resource_status_summary' project.slug %}" hx-trigger="load" hx-swap="outerHTML"></div>
-        <div hx-get="{% url 'project_resource_license_summary' project.slug %}" hx-trigger="load" hx-swap="outerHTML"></div>
+        <div hx-get="{% url 'project_license_detection_summary' project.slug %}" hx-trigger="load" hx-swap="outerHTML"></div>
       </div>
 
       {% if project.extra_data %}

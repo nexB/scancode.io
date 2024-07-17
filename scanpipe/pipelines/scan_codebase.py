@@ -45,6 +45,7 @@ class ScanCodebase(Pipeline):
             cls.flag_ignored_resources,
             cls.scan_for_application_packages,
             cls.scan_for_files,
+            cls.collect_and_create_license_detections,
         )
 
     def copy_inputs_to_codebase_directory(self):
@@ -65,3 +66,10 @@ class ScanCodebase(Pipeline):
     def scan_for_files(self):
         """Scan unknown resources for copyrights, licenses, emails, and urls."""
         scancode.scan_for_files(self.project, progress_logger=self.log)
+
+    def collect_and_create_license_detections(self):
+        """
+        Collect and create unique license detections from resources and
+        package data.
+        """
+        scancode.collect_and_create_license_detections(project=self.project)

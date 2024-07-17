@@ -1,0 +1,102 @@
+<div class="content">
+    {% if tab_data.fields.license_detections.value %}
+    <table class="table is-bordered is-striped is-narrow is-hoverable is-fullwidth">
+        <thead>
+          <tr>
+            <th>License Detections</th>
+            <th>License Expression</th>
+            <th>License Expression SPDX</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for detection in tab_data.fields.license_detections.value %}
+          <tr>
+              <td class="break-all">
+                  <a href="{% url 'license_detail' project.slug detection.identifier %}">{{ detection.identifier }}</a>
+              </td>
+              <td class="break-all">
+                  {{ detection.license_expression }}
+              </td>
+              <td class="break-all">
+                  {{ detection.license_expression_spdx }}
+              </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+    {% if tab_data.fields.license_clues.value %}
+    <table class="table is-bordered is-striped is-narrow is-hoverable is-fullwidth">
+        <thead>
+          <tr>
+            <th>License Expression</th>
+            <th>License Clue Detials</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for clue in tab_data.fields.license_clues.value %}
+          <tr>
+              <td class="break-all">
+                {{ clue.license_expression }}
+              </td>
+              <td class="break-all">
+                  {{ clue }}
+              </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+    {% if tab_data.fields.emails.value %}
+    <table class="table is-bordered is-striped is-narrow is-hoverable is-fullwidth">
+        <thead>
+          <tr>
+            <th>Email</th>
+            <th>Start Line</th>
+            <th>End Line</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for email in tab_data.fields.emails.value %}
+          <tr>
+              <td class="break-all">
+                {{ email.email }}
+              </td>
+              <td class="break-all">
+                  {{ email.start_line }}
+              </td>
+              <td class="break-all">
+                {{ email.end_line }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+    {% if tab_data.fields.urls.value %}
+    <table class="table is-bordered is-striped is-narrow is-hoverable is-fullwidth">
+        <thead>
+          <tr>
+            <th>URL</th>
+            <th>Start Line</th>
+            <th>End Line</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for url in tab_data.fields.urls.value %}
+          <tr>
+              <td class="break-all">
+                {{ url.url }}
+              </td>
+              <td class="break-all">
+                  {{ url.start_line }}
+              </td>
+              <td class="break-all">
+                {{ url.end_line }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+  </div>

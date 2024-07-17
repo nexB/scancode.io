@@ -171,6 +171,7 @@ class ScanPipeModelsTest(TestCase):
             "scanpipe.CodebaseRelation": 0,
             "scanpipe.CodebaseResource": 1,
             "scanpipe.DiscoveredDependency": 0,
+            "scanpipe.DiscoveredLicense": 0,
             "scanpipe.DiscoveredPackage": 1,
             "scanpipe.DiscoveredPackage_codebase_resources": 1,
             "scanpipe.ProjectMessage": 0,

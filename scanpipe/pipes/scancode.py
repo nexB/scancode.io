@@ -38,6 +38,7 @@ from django.db.models import ObjectDoesNotExist
 from commoncode import fileutils
 from commoncode.resource import VirtualCodebase
 from extractcode import api as extractcode_api
+from licensedcode.detection import FileRegion
 from packagedcode import get_package_handler
 from packagedcode import models as packagedcode_models
 from scancode import Scanner
@@ -434,6 +435,63 @@ def add_resource_to_package(package_uid, resource, project):
     resource.discovered_packages.add(package)
 
 
+def collect_and_create_license_detections(project):
+    """
+    Create instances of DiscoveredLicense for `project` from the parsed
+    license detections present in the CodebaseResources and
+    DiscoveredPackages of `project`.
+    """
+    logger.info(f"Project {project} collect_license_detections:")
+
+    for resource in project.codebaseresources.has_license_detections():
+        logger.info(f"  Processing: {resource.path} for licenses")
+
+        for detection_data in resource.license_detections:
+            pipes.update_or_create_license_detection(
+                project=project,
+                detection_data=detection_data,
+                resource_path=resource.path,
+            )
+
+    for resource in project.codebaseresources.has_package_data():
+
+        for package_mapping in resource.package_data:
+            package_data = packagedcode_models.PackageData.from_dict(
+                mapping=package_mapping,
+            )
+
+            for detection in package_data.license_detections:
+                pipes.update_or_create_license_detection(
+                    project=project,
+                    detection_data=detection,
+                    resource_path=resource.path,
+                    from_package=True,
+                )
+
+            for detection in package_data.other_license_detections:
+                pipes.update_or_create_license_detection(
+                    project=project,
+                    detection_data=detection,
+                    resource_path=resource.path,
+                    from_package=True,
+                )
+
+
+def get_file_region(detection_data, resource_path):
+    """
+    From a LicenseDetection mapping `detection_data`, create a FileRegion
+    object containing information about where this license was detected
+    exactly in a codebase, with `resource_path`, with start and end lines.
+    """
+    start_line = min([match["start_line"] for match in detection_data["matches"]])
+    end_line = max([match["end_line"] for match in detection_data["matches"]])
+    return FileRegion(
+        path=resource_path,
+        start_line=start_line,
+        end_line=end_line,
+    )
+
+
 def assemble_packages(project):
     """
     Create instances of DiscoveredPackage and DiscoveredDependency for `project`
@@ -794,6 +852,32 @@ def create_codebase_resources(project, scanned_codebase):
                 discovered_package=package,
             )
 
+        license_detections = getattr(scanned_resource, "license_detections", [])
+        for detection_data in license_detections:
+            detection_identifier = detection_data.get("identifier")
+            pipes.update_or_create_license_detection(
+                project=project,
+                detection_data=detection_data,
+                resource_path=resource_path,
+                count_detection=False,
+            )
+            logger.debug(f"Add {codebase_resource} to {detection_identifier}")
+
+        packages = getattr(scanned_resource, "package_data", [])
+        for package_data in packages:
+            license_detections = package_data.get("license_detections", [])
+            license_detections.extend(package_data.get("other_license_detections", []))
+            for detection_data in license_detections:
+                detection_identifier = detection_data.get("identifier")
+                pipes.update_or_create_license_detection(
+                    project=project,
+                    detection_data=detection_data,
+                    resource_path=resource_path,
+                    count_detection=False,
+                    from_package=True,
+                )
+                logger.debug(f"Add {codebase_resource} to {detection_identifier}")
+
 
 def create_discovered_packages(project, scanned_codebase):
     """
@@ -803,6 +887,16 @@ def create_discovered_packages(project, scanned_codebase):
     if hasattr(scanned_codebase.attributes, "packages"):
         for package_data in scanned_codebase.attributes.packages:
             pipes.update_or_create_package(project, package_data)
+            license_detections = package_data.get("license_detections", [])
+            license_detections.extend(package_data.get("other_license_detections", []))
+
+            for license_detection in license_detections:
+                pipes.update_or_create_license_detection(
+                    project=project,
+                    detection_data=license_detection,
+                    from_package=True,
+                    count_detection=False,
+                )
 
 
 def create_discovered_dependencies(
@@ -826,6 +920,17 @@ def create_discovered_dependencies(
                 dependency_data,
                 strip_datafile_path_root=strip_datafile_path_root,
             )
+
+
+def create_discovered_licenses(project, scanned_codebase):
+    """
+    Save the license detections of a ScanCode `scanned_codebase`
+    scancode.resource.Codebase object to the database as a DiscoveredLicense of
+    `project`.
+    """
+    if hasattr(scanned_codebase.attributes, "license_detections"):
+        for detection_data in scanned_codebase.attributes.license_detections:
+            pipes.update_or_create_license_detection(project, detection_data)
 
 
 def set_codebase_resource_for_package(codebase_resource, discovered_package):

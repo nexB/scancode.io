@@ -38,6 +38,7 @@ from scanpipe.models import AbstractTaskFieldsModel
 from scanpipe.models import CodebaseRelation
 from scanpipe.models import CodebaseResource
 from scanpipe.models import DiscoveredDependency
+from scanpipe.models import DiscoveredLicense
 from scanpipe.models import DiscoveredPackage
 from scanpipe.pipes import scancode
 
@@ -307,6 +308,78 @@ def update_or_create_dependency(
         )
 
     return dependency
+
+
+def update_or_create_license_detection(
+    project,
+    detection_data,
+    resource_path=None,
+    from_package=False,
+    count_detection=True,
+):
+    """
+    Get, update or create a DiscoveredLicense object then return it.
+    Use the `project` and `detection_data` mapping to lookup and creates the
+    DiscoveredLicense using its detection identifier as a unique key.
+
+    Additonally if `resource_path` is passed, add the file region where
+    the license was detected to the DiscoveredLicense object, if not present
+    already. `from_package` is True if the license detection was in a
+    `extracted_license_statement` from a package metadata.
+    """
+    detection_identifier = detection_data["identifier"]
+
+    license_detection = project.discoveredlicenses.get_or_none(
+        identifier=detection_identifier,
+    )
+    detection_data = _clean_license_detection_data(detection_data)
+
+    if license_detection:
+        license_detection.update_from_data(detection_data)
+    else:
+        license_detection = DiscoveredLicense.create_from_data(
+            project,
+            detection_data,
+        )
+
+    if not license_detection:
+        project.add_error(
+            model="update_or_create_license_detection",
+            details=detection_data,
+            resource=resource_path,
+        )
+        return
+
+    if resource_path:
+        file_region = scancode.get_file_region(
+            detection_data=detection_data,
+            resource_path=resource_path,
+        )
+        license_detection.update_with_file_region(
+            file_region=file_region,
+            count_detection=count_detection,
+        )
+
+    license_detection.from_package = from_package
+    return license_detection
+
+
+def _clean_license_detection_data(detection_data):
+    detection_data = detection_data.copy()
+    if "reference_matches" in detection_data:
+        matches = detection_data.pop("reference_matches")
+        detection_data["matches"] = matches
+
+    updated_matches = []
+    for match_data in detection_data["matches"]:
+        from_file_path = match_data["from_file"]
+        if from_file_path:
+            match_data["from_file"] = from_file_path.removeprefix("codebase/")
+
+        updated_matches.append(match_data)
+
+    detection_data["matches"] = updated_matches
+    return detection_data
 
 
 def get_dependencies(project, dependency_data):

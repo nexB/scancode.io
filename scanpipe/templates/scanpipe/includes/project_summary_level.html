@@ -14,6 +14,12 @@
               <i class="fa-solid fa-bug is-size-6"></i>
             </a>
           {% endif %}
+          {% if project.package_compliance_alert_count %}
+            <a href="{% url 'project_packages' project.slug %}?compliance_alert=error" class="has-text-danger is-size-5 ml-2">
+              {{ project.package_compliance_alert_count|intcomma }}
+              <i class="fa-solid fa-scale-balanced is-size-6"></i>
+            </a>
+          {% endif %}
         {% else %}
           <span>0</span>
         {% endif %}
@@ -43,11 +49,17 @@
   <div class="level-item has-text-centered">
     <div>
       <p class="heading">Resources</p>
-      <p class="{{ title_class }}">
+      <p class="{{ title_class }} is-flex is-align-items-center is-justify-content-center">
         {% if project.resource_count %}
           <a href="{{ project_resources_url }}">
             {{ project.resource_count|intcomma }}
           </a>
+          {% if project.resource_compliance_alert_count %}
+            <a href="{% url 'project_resources' project.slug %}?compliance_alert=error" class="has-text-danger is-size-5 ml-2">
+              {{ project.resource_compliance_alert_count|intcomma }}
+              <i class="fa-solid fa-scale-balanced is-size-6"></i>
+            </a>
+          {% endif %}
         {% else %}
           <span>0</span>
         {% endif %}
