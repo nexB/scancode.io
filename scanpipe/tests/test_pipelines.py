@@ -1233,6 +1233,41 @@ class PipelinesIntegrationTest(TestCase):
         expected = vulnerability_data[0]["affected_by_vulnerabilities"]
         self.assertEqual(expected, package1.affected_by_vulnerabilities)
 
+    @mock.patch("ossf_scorecard.scorecard.is_available")
+    @mock.patch("ossf_scorecard.scorecard.is_configured")
+    def test_scanpipe_get_scorecard_info_packages_integration(
+        self, mock_is_configured, mock_is_available
+    ):
+        pipeline_name = "get_scorecard_info_packages"
+        project1 = Project.objects.create(name="Analysis")
+        package1 = DiscoveredPackage.create_from_data(project1, package_data1)
+        package1.vcs_url = "https://github.com/nexB/scancode-toolkit"
+        package1.save()
+
+        run = project1.add_pipeline(pipeline_name)
+        pipeline = run.make_pipeline_instance()
+        mock_is_configured.return_value = False
+        mock_is_available.return_value = False
+        exitcode, out = pipeline.execute()
+        self.assertEqual(1, exitcode, msg=out)
+        self.assertIn("scorecode service is not configured.", out)
+
+        run = project1.add_pipeline(pipeline_name)
+        pipeline = run.make_pipeline_instance()
+        mock_is_configured.return_value = True
+        mock_is_available.return_value = True
+
+        exitcode, out = pipeline.execute()
+        self.assertEqual(0, exitcode, msg=out)
+
+        package1.refresh_from_db()
+        self.assertIsNotNone(
+            package1.discovered_packages_score.filter(scoring_tool="OSSF")[0].score,
+            msg=out,
+        )
+
+        self.assertEqual("https://github.com/nexB/scancode-toolkit", package1.vcs_url)
+
     def test_scanpipe_resolve_dependencies_pipeline_integration(self):
         pipeline_name = "resolve_dependencies"
         project1 = Project.objects.create(name="Analysis")

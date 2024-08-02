@@ -262,3 +262,250 @@ license_policies_index = {
         "license_key": "mpl-2.0",
     },
 }
+
+scorecard_data = {
+    "date": "2024-06-17",
+    "repo": {
+        "name": "github.com/pallets/flask",
+        "commit": "d718ecf6d3dfc4656d262154c59672437c1ea075",
+    },
+    "scorecard": {
+        "version": "v5.0.0-rc2-63-g5d08c1cc",
+        "commit": "5d08c1cc11c1e45c2ab2a88adac0a18464f0216b",
+    },
+    "score": 6.7,
+    "checks": [
+        {
+            "name": "Code-Review",
+            "score": 1,
+            "reason": "Found 2/11 approved changesets -- score normalized to 1",
+            "details": None,
+            "documentation": {
+                "short": "Determines if the project requires human code review before "
+                "pull requests (aka merge requests) are merged.",
+                "url": "https://github.com/ossf/scorecard/blob/5d08c1cc11c1e45c2ab2a"
+                "88adac0a18464f0216b/docs/checks.md#code-review",
+            },
+        },
+        {
+            "name": "Maintained",
+            "score": 10,
+            "reason": "30 commit(s) and 17 issue activity found in the last 90 days "
+            "-- score normalized to 10",
+            "details": None,
+            "documentation": {
+                "short": 'Determines if the project is "actively maintained".',
+                "url": "https://github.com/ossf/scorecard/blob/5d08c1cc11c1e45c2ab2a88"
+                "adac0a18464f0216b/docs/checks.md#maintained",
+            },
+        },
+        {
+            "name": "CII-Best-Practices",
+            "score": 0,
+            "reason": "no effort to earn an OpenSSF best practices badge detected",
+            "details": None,
+            "documentation": {
+                "short": "Determines if the project has an OpenSSF (formerly CII) Best "
+                "Practices Badge.",
+                "url": "https://github.com/ossf/scorecard/blob/5d08c1cc11c1e45c2ab2a88"
+                "adac0a18464f0216b/docs/checks.md#cii-best-practices",
+            },
+        },
+        {
+            "name": "License",
+            "score": 10,
+            "reason": "license file detected",
+            "details": [
+                "Info: project has a license file: LICENSE.txt:0",
+                'Info: FSF or OSI recognized license: BSD 3-Clause "New" or "Revised"'
+                " License: LICENSE.txt:0",
+            ],
+            "documentation": {
+                "short": "Determines if the project has defined a license.",
+                "url": "https://github.com/ossf/scorecard/blob/5d08c1cc11c"
+                "1e45c2ab2a88adac0a18464f0216b/docs/checks.md#license",
+            },
+        },
+        {
+            "name": "Dangerous-Workflow",
+            "score": 10,
+            "reason": "no dangerous workflow patterns detected",
+            "details": None,
+            "documentation": {
+                "short": "Determines if the project's GitHub Action workflows avoid "
+                "dangerous patterns.",
+                "url": "https://github.com/ossf/scorecard/blob/5d08c1cc11c1e45c2ab2a88a"
+                "dac0a18464f0216b/docs/checks.md#dangerous-workflow",
+            },
+        },
+        {
+            "name": "Signed-Releases",
+            "score": 10,
+            "reason": "5 out of the last 5 releases have a total of 5 signed "
+            "artifacts.",
+            "details": [
+                "Info: provenance for release artifact: multiple.intoto.jsonl:"
+                " https://api.github.com/repos/pallets/flask/releases/assets/160813583",
+                "Info: provenance for release artifact: multiple.intoto.jsonl:"
+                " https://api.github.com/repos/pallets/flask/releases/assets/149637381",
+                "Info: provenance for release artifact: multiple.intoto.jsonl:"
+                " https://api.github.com/repos/pallets/flask/releases/assets/146388022",
+                "Info: provenance for release artifact: multiple.intoto.jsonl:"
+                " https://api.github.com/repos/pallets/flask/releases/assets/128454404",
+                "Info: provenance for release artifact: multiple.intoto.jsonl:"
+                " https://api.github.com/repos/pallets/flask/releases/assets/122480844",
+            ],
+            "documentation": {
+                "short": "Determines if the project cryptographically signs release art"
+                "ifacts.",
+                "url": "https://github.com/ossf/scorecard/blob/5d08c1cc11c1e45c2ab2a88"
+                "adac0a18464f0216b/docs/checks.md#signed-releases",
+            },
+        },
+        {
+            "name": "Token-Permissions",
+            "score": 0,
+            "reason": "detected GitHub workflow tokens with excessive permissions",
+            "details": [
+                "Info: jobLevel 'actions' permission set to 'read': .github/workflows/"
+                "publish.yaml:32",
+                "Warn: no topLevel permission defined: .github/workflows/publish"
+                ".yaml:1",
+                "Warn: no topLevel permission defined: .github/workflows/tests.yaml:1",
+                "Info: no jobLevel write permissions found",
+            ],
+            "documentation": {
+                "short": "Determines if the project's workflows follow the princip"
+                "le of least privilege.",
+                "url": "https://github.com/ossf/scorecard/blob/5d08c1cc11c1e45c2ab2a8"
+                "8adac0a18464f0216b/docs/checks.md#token-permissions",
+            },
+        },
+        {
+            "name": "Binary-Artifacts",
+            "score": 10,
+            "reason": "no binaries found in the repo",
+            "details": None,
+            "documentation": {
+                "short": "Determines if the project has generated executable (bin"
+                "ary) artifacts in the source repository.",
+                "url": "https://github.com/ossf/scorecard/blob/5d08c1cc11c1e45c2ab"
+                "2a88adac0a18464f0216b/docs/checks.md#binary-artifacts",
+            },
+        },
+        {
+            "name": "Branch-Protection",
+            "score": -1,
+            "reason": "internal error: error during branchesHandler.setup: intern"
+            "al error: githubv4.Query: "
+            "Resource not accessible by integration",
+            "details": None,
+            "documentation": {
+                "short": "Determines if the default and release branches are prote"
+                "cted with GitHub's branch protection settings.",
+                "url": "https://github.com/ossf/scorecard/blob/5d08c1cc11c1e45c2ab"
+                "2a88adac0a18464f0216b/docs/checks.md#branch-protection",
+            },
+        },
+        {
+            "name": "Pinned-Dependencies",
+            "score": 4,
+            "reason": "dependency not pinned by hash detected -- score normalized to 4",
+            "details": [
+                "Info: Possibly incomplete results: error parsing shell code: inv"
+                "alid parameter name: .github/workflows/tests.yaml:44",
+                "Warn: pipCommand not pinned by hash: .devcontainer/on-create-command"
+                ".sh:5",
+                "Warn: pipCommand not pinned by hash: .devcontainer/on-create-comm"
+                "and.sh:6",
+                "Warn: pipCommand not pinned by hash: .github/workflows/publish.yaml"
+                ":19",
+                "Warn: pipCommand not pinned by hash: .github/workflows/tests.yaml:44",
+                "Warn: pipCommand not pinned by hash: .github/workflows/tests.yaml:60",
+                "Info:  10 out of  10 GitHub-owned GitHubAction dependencies pinned",
+                "Info:   3 out of   3 third-party GitHubAction dependencies pinned",
+                "Info:   0 out of   5 pipCommand dependencies pinned",
+            ],
+            "documentation": {
+                "short": "Determines if the project has declared and pinned the depen"
+                "dencies of its build process.",
+                "url": "https://github.com/ossf/scorecard/blob/5d08c1cc11c1e45c2ab"
+                "2a88adac0a18464f0216b/docs/checks.md#pinned-dependencies",
+            },
+        },
+        {
+            "name": "Fuzzing",
+            "score": 10,
+            "reason": "project is fuzzed",
+            "details": ["Info: OSSFuzz integration found"],
+            "documentation": {
+                "short": "Determines if the project uses fuzzing.",
+                "url": "https://github.com/ossf/scorecard/blob/5d08c1cc11c1e45c2ab2a"
+                "88adac0a18464f0216b/docs/checks.md#fuzzing",
+            },
+        },
+        {
+            "name": "Packaging",
+            "score": 10,
+            "reason": "packaging workflow detected",
+            "details": [
+                "Info: Project packages its releases by way of GitHub Actions.: .git"
+                "hub/workflows/publish.yaml:55"
+            ],
+            "documentation": {
+                "short": "Determines if the project is published as a package that othe"
+                "rs can easily download, install, "
+                "easily update, and uninstall.",
+                "url": "https://github.com/ossf/scorecard/blob/5d08c1cc11c1e"
+                "45c2ab2a88adac0a18464f0216b/docs/checks.md#packaging",
+            },
+        },
+        {
+            "name": "Security-Policy",
+            "score": 9,
+            "reason": "security policy file detected",
+            "details": [
+                "Info: security policy file detected: github.com/pallets/.github/S"
+                "ECURITY.md:1",
+                "Info: Found linked content: github.com/pallets/.github/SECURITY.md:1",
+                "Warn: One or no descriptive hints of disclosure, vulnerability,"
+                " and/or timelines in security policy",
+                "Info: Found text in security policy: github.com/pallets/"
+                ".github/SECURITY.md:1",
+            ],
+            "documentation": {
+                "short": "Determines if the project has published a security policy.",
+                "url": "https://github.com/ossf/scorecard/blob/5d08c1cc11c1e45c2"
+                "ab2a88adac0a18464f0216b/docs/checks.md#security-policy",
+            },
+        },
+        {
+            "name": "Vulnerabilities",
+            "score": 6,
+            "reason": "4 existing vulnerabilities detected",
+            "details": [
+                "Warn: Project is vulnerable to: GHSA-h5c8-rqwp-cp95",
+                "Warn: Project is vulnerable to: GHSA-h75v-3vvj-5mfj",
+                "Warn: Project is vulnerable to: GHSA-2g68-c3qc-8985",
+                "Warn: Project is vulnerable to: GHSA-hrfv-mqp8-q5rw / PYSEC-2023-221",
+            ],
+            "documentation": {
+                "short": "Determines if the project has open, known unfixed vulnera"
+                "bilities.",
+                "url": "https://github.com/ossf/scorecard/blob/5d08c1cc11c1e45c2ab2"
+                "a88adac0a18464f0216b/docs/checks.md#vulnerabilities",
+            },
+        },
+        {
+            "name": "SAST",
+            "score": 0,
+            "reason": "SAST tool is not run on all commits -- score normalized to 0",
+            "details": ["Warn: 0 commits out of 22 are checked with a SAST tool"],
+            "documentation": {
+                "short": "Determines if the project uses static code analysis.",
+                "url": "https://github.com/ossf/scorecard/blob/5d08c1cc11c1e45c2a"
+                "b2a88adac0a18464f0216b/docs/checks.md#sast",
+            },
+        },
+    ],
+}
