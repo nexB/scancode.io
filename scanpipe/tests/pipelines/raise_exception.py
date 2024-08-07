@@ -26,6 +26,8 @@ from scanpipe.pipelines import Pipeline
 class RaiseException(Pipeline):
     """Raise an Exception."""
 
+    download_inputs = False
+
     @classmethod
     def steps(cls):
         return (cls.raise_exception_step,)

@@ -20,12 +20,14 @@
 # ScanCode.io is a free software code scanning tool from nexB Inc. and others.
 # Visit https://github.com/nexB/scancode.io for support and download.
 
+from pipeline import group
 from scanpipe.pipelines import Pipeline
-from scanpipe.pipelines import group
 
 
 class WithGroups(Pipeline):
     """Include "grouped" steps."""
+
+    download_inputs = False
 
     @classmethod
     def steps(cls):

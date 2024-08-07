@@ -32,7 +32,7 @@ from packageurl import PackageURL
 from univers.version_range import RANGE_CLASS_BY_SCHEMES
 from univers.version_range import InvalidVersionRange
 
-from scanpipe.pipes import LoopProgress
+from pipeline import LoopProgress
 from scanpipe.pipes import _clean_package_data
 
 

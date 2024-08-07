@@ -1,0 +1,59 @@
+[build-system]
+requires = [ "flot>=0.7.0" ]
+build-backend = "flot.buildapi"
+
+[project]
+name = "aboutcode-pipeline"
+version = "1.0.0"
+description = ""
+license = { text = "Apache-2.0" }
+# TODO consider a readme?
+# readme = "README.rst"
+requires-python = ">=3.8"
+authors = [
+    { name = "nexB. Inc. and others", email = "info@aboutcode.org" },
+]
+keywords = [
+    "open source",
+    "pipeline",
+    "scancode",
+]
+
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development",
+    "Topic :: Utilities",
+]
+
+dependencies = [
+    "bleach>=6.1.0",
+    "markdown-it-py>=3.0.0",
+]
+
+
+[project.urls]
+Homepage = "https://github.com/nexB/scancode.io"
+
+
+[tool.flot]
+
+includes = [
+    "pipeline/__init__.py",
+]
+
+metadata_files = [
+    "*.LICENSE",
+    "NOTICE",
+    "CHANGELOG.rst",
+    "CODE_OF_CONDUCT.rst",
+    "README-pipeline.rst",
+]
+

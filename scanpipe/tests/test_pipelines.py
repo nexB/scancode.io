@@ -152,10 +152,10 @@ class ScanPipePipelinesTest(TestCase):
 
         project1 = Project.objects.create(name="Analysis")
         run = project1.add_pipeline("do_nothing")
-        pipeline = run.make_pipeline_instance()
 
         run.selected_steps = ["step2", "not_existing_step"]
         run.save()
+        pipeline = run.make_pipeline_instance()
 
         exitcode, out = pipeline.execute()
         self.assertEqual(0, exitcode)
@@ -174,6 +174,7 @@ class ScanPipePipelinesTest(TestCase):
     def test_scanpipe_pipeline_class_download_inputs_attribute(self):
         project1 = Project.objects.create(name="Analysis")
         run = project1.add_pipeline("do_nothing")
+        run.pipeline_class.download_inputs = True
         pipeline = run.make_pipeline_instance()
         self.assertTrue(pipeline.download_inputs)
         pipeline.execute()
@@ -181,7 +182,7 @@ class ScanPipePipelinesTest(TestCase):
 
         run = project1.add_pipeline("do_nothing")
         pipeline = run.make_pipeline_instance()
-        pipeline.download_inputs = False
+        run.pipeline_class.download_inputs = False
         pipeline.execute()
         self.assertNotIn("Step [download_missing_inputs]", run.log)
 

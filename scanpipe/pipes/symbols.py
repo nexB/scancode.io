@@ -22,7 +22,7 @@
 
 from django.db.models import Q
 
-from scanpipe.pipes import LoopProgress
+from pipeline import LoopProgress
 
 
 class UniversalCtagsNotFound(Exception):

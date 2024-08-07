@@ -45,6 +45,7 @@ from scancode import api as scancode_api
 from scancode import cli as scancode_cli
 from scancode.cli import run_scan as scancode_run_scan
 
+from pipeline import LoopProgress
 from scanpipe import pipes
 from scanpipe.models import CodebaseResource
 from scanpipe.models import DiscoveredDependency
@@ -308,7 +309,7 @@ def scan_resources(
     resource_count = resource_qs.count()
     logger.info(f"Scan {resource_count} codebase resources with {scan_func.__name__}")
     resource_iterator = resource_qs.iterator(chunk_size=2000)
-    progress = pipes.LoopProgress(resource_count, logger=progress_logger)
+    progress = LoopProgress(resource_count, logger=progress_logger)
     max_workers = get_max_workers(keep_available=1)
 
     if max_workers <= 0:

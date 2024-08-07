@@ -44,11 +44,11 @@ from go_inspector.plugin import collect_and_parse_symbols
 from packagedcode.npm import NpmPackageJsonHandler
 from summarycode.classify import LEGAL_STARTS_ENDS
 
+from pipeline import LoopProgress
 from scanpipe import pipes
 from scanpipe.models import CodebaseRelation
 from scanpipe.models import CodebaseResource
 from scanpipe.models import convert_glob_to_django_regex
-from scanpipe.pipes import LoopProgress
 from scanpipe.pipes import flag
 from scanpipe.pipes import get_resource_diff_ratio
 from scanpipe.pipes import js

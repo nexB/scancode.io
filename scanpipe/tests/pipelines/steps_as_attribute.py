@@ -26,6 +26,8 @@ from scanpipe.pipelines import Pipeline
 class StepsAsAttribute(Pipeline):
     """Declare steps as attribute."""
 
+    download_inputs = False
+
     def step1(self):
         return
 

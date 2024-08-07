@@ -30,6 +30,8 @@ class DoNothing(Pipeline):
     Description section of the doc string.
     """
 
+    download_inputs = False
+
     @classmethod
     def steps(cls):
         return (

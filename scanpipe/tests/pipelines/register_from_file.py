@@ -26,6 +26,8 @@ from scanpipe.tests.pipelines.do_nothing import DoNothing
 class RegisterFromFile(DoNothing):
     """Register from its file path."""
 
+    download_inputs = False
+
     @classmethod
     def steps(cls):
         return (cls.step1,)

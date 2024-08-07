@@ -28,9 +28,9 @@ from django.core.exceptions import ValidationError
 from taggit.forms import TagField
 from taggit.forms import TagWidget
 
+from pipeline import convert_markdown_to_html
 from scanpipe.models import Project
 from scanpipe.models import Run
-from scanpipe.pipelines import convert_markdown_to_html
 from scanpipe.pipes import fetch
 
 scanpipe_app = apps.get_app_config("scanpipe")

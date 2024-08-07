@@ -27,6 +27,8 @@ from scanpipe.pipelines import profile
 class ProfileStep(Pipeline):
     """Profile a step using the @profile decorator."""
 
+    download_inputs = False
+
     @classmethod
     def steps(cls):
         return (cls.step,)

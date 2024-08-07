@@ -28,6 +28,7 @@ from unittest import mock
 from django.test import TestCase
 from django.test import TransactionTestCase
 
+from pipeline import LoopProgress
 from scanpipe import pipes
 from scanpipe.models import CodebaseResource
 from scanpipe.models import DiscoveredPackage
@@ -348,14 +349,14 @@ class ScanPipePipesTransactionTest(TransactionTestCase):
 
         buffer = io.StringIO()
         logger = buffer.write
-        progress = pipes.LoopProgress(total_iterations, logger, progress_step=10)
+        progress = LoopProgress(total_iterations, logger, progress_step=10)
         for _ in progress.iter(range(total_iterations)):
             pass
         self.assertEqual(expected, buffer.getvalue())
 
         buffer = io.StringIO()
         logger = buffer.write
-        with pipes.LoopProgress(total_iterations, logger, progress_step) as progress:
+        with LoopProgress(total_iterations, logger, progress_step) as progress:
             for _ in progress.iter(range(total_iterations)):
                 pass
         self.assertEqual(expected, buffer.getvalue())
