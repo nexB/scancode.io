@@ -1,6 +1,24 @@
 {% extends "scanpipe/base.html" %}
+{% load static %}
 
 {% block title %}ScanCode.io: {{ project.name }} - Dependency tree{% endblock %}
+
+{% block extrahead %}
+<link rel="stylesheet" href="{% static 'tree-views/tree.css' %}" crossorigin="anonymous">
+<style>
+  .tree {
+    line-height: 1.8rem;
+    --spacing : 2rem;
+  }
+  .tree summary {
+    display: inline-block;
+  }
+  .tree summary::before{
+    background-color: rgb(72, 199, 142);
+    background-image: url('{% static "tree-views/expand-collapse.svg" %}');
+  }
+</style>
+{% endblock %}
 
 {% block content %}
   <div id="content-header" class="container is-max-widescreen mb-3">
@@ -13,64 +31,127 @@
   </div>
 
   <div class="container is-max-widescreen mb-3">
-    {% if recursion_error %}
-      <article class="message is-danger">
-        <div class="message-body">
-          The dependency tree cannot be rendered as it contains circular references.
-          {{ message|linebreaksbr }}
-        </div>
-      </article>
-    {% endif %}
-    <div id="tree"></div>
+    <section class="mx-5">
+      {% if recursion_error %}
+        <article class="message is-danger">
+          <div class="message-body">
+            The dependency tree cannot be rendered as it contains circular references.
+            {{ message|linebreaksbr }}
+          </div>
+        </article>
+      {% endif %}
+
+      <div class="mb-4">
+        <button id="collapseAll" class="button is-outlined is-small">
+          <span>Collapse All</span>
+          <span class="icon is-small">
+            <i class="fas fa-minus"></i>
+          </span>
+        </button>
+        <button id="expendAll" class="button is-outlined is-small">
+          <span>Expend All</span>
+          <span class="icon is-small">
+            <i class="fas fa-plus"></i>
+          </span>
+        </button>
+        <button id="showVulnerableOnlyButton" class="button is-outlined is-small">
+          <span>Show Vulnerable only</span>
+          <span class="icon is-small">
+            <i class="fa-solid fa-bug"></i>
+          </span>
+        </button>
+        <button id="showComplianceAlertOnlyButton" class="button is-outlined is-small">
+          <span>Show Compliance Alert only</span>
+          <span class="icon is-small ">
+            <i class="fa-solid fa-scale-balanced"></i>
+          </span>
+        </button>
+      </div>
+
+      <ul id="tree" class="tree">
+        <li>
+          <details open>
+            <summary class="has-text-weight-semibold">
+              {{ dependency_tree.name }}
+            </summary>
+            {% include 'scanpipe/tree/children.html' with children=dependency_tree.children %}
+          </details>
+        </li>
+      </ul>
+    </section>
   </div>
 {% endblock %}
 
 {% block scripts %}
-  <script src="https://d3js.org/d3.v7.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6"></script>
-  {{ dependency_tree|json_script:"dependency_tree" }}
-  {{ row_count|json_script:"row_count" }}
-  {{ max_depth|json_script:"max_depth" }}
-  <script>
-    const data = JSON.parse(document.getElementById("dependency_tree").textContent);
-    const hierarchyData = d3.hierarchy(data);
-    const columnWidth = 110;
-    const rowWidth = 25;
-    const columnCount = hierarchyData.height;
-    const rowCount = hierarchyData.links().length;
-    const width = columnWidth * (columnCount + 1);
-    const height = rowWidth * (rowCount + 1);
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const treeContainer = document.getElementById('tree');
+  const collapseAllButton = document.getElementById('collapseAll');
+  const expendAllButton = document.getElementById('expendAll');
 
-    function indent() {
-      return (root) => {
-        root.eachBefore((node, i) => {
-          node.y = node.depth;
-          node.x = i;
-        });
-      };
-    }
-
-    // https://observablehq.com/plot/marks/tree
-    const plot = Plot.plot({
-      axis: null,
-      margin: 10,
-      marginLeft: 40,
-      marginRight: 160,
-      width: width,
-      height: height,
-      marks: [
-        Plot.tree(hierarchyData.leaves(), {
-          path: (node) => node.ancestors().reverse().map(({ data: { name } }) => name).join("|"),
-          delimiter: "|",
-          treeLayout: indent,
-          strokeWidth: 1,
-          curve: "step-before",
-          fontSize: 14,
-          textStroke: "none"
-        })
-      ]
+  function collapseAllDetails() {
+    document.querySelectorAll('details').forEach(details => {
+      details.removeAttribute('open');
     });
+    showAllListItems();
+  }
 
-    document.getElementById("tree").appendChild(plot);
-  </script>
+  function expendAllDetails() {
+    document.querySelectorAll('details').forEach(details => {
+      details.setAttribute('open', ''); // Adding 'open' attribute to open the details
+    });
+    showAllListItems();
+  }
+
+  collapseAllButton.addEventListener('click', collapseAllDetails);
+  expendAllButton.addEventListener('click', expendAllDetails);
+
+  // Following function are use to limit the display to specific elements.
+
+  function expandAncestors(detailsElement) {
+    let parent = detailsElement.parentElement.closest('details');
+    while (parent) {
+      parent.setAttribute('open', '');
+      parent.parentElement.style.display = '';
+      parent = parent.parentElement.closest('details');
+    }
+  }
+
+  function showAllListItems() {
+    const listItems = treeContainer.querySelectorAll('li');
+    listItems.forEach(item => {
+        item.style.display = '';
+    });
+  }
+
+  function hideAllListItems() {
+    const listItems = treeContainer.querySelectorAll('li');
+    listItems.forEach(item => {
+        item.style.display = 'none';
+    });
+  }
+
+  function handleItems(attribute, value) {
+    collapseAllDetails();
+    hideAllListItems();
+
+    const items = document.querySelectorAll(`li[${attribute}="${value}"]`);
+    items.forEach(item => {
+        item.style.display = 'block';
+        expandAncestors(item);
+    });
+  }
+
+  function handleVulnerableItems() {
+    handleItems('data-is-vulnerable', 'true');
+  }
+
+  function handleComplianceAlertItems() {
+    handleItems('data-compliance-alert', 'true');
+  }
+
+  showVulnerableOnlyButton.addEventListener('click', handleVulnerableItems);
+  showComplianceAlertOnlyButton.addEventListener('click', handleComplianceAlertItems);
+});
+</script>
 {% endblock %}

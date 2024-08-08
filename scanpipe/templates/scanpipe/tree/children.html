@@ -1,0 +1,19 @@
+<ul>
+  {% for node in children %}
+    <li
+        {% if node.is_vulnerable %} data-is-vulnerable="true"{% endif %}
+        {% if node.compliance_alert == "warning" or node.compliance_alert == "error" %} data-compliance-alert="true"{% endif %}
+    >
+      {% if node.children %}
+        <details class="my-1" open>
+          <summary>
+            {% include 'scanpipe/tree/node.html' with node=node only %}
+          </summary>
+          {% include 'scanpipe/tree/children.html' with children=node.children only %}
+        </details>
+      {% else %}
+        {% include 'scanpipe/tree/node.html' with node=node only %}
+      {% endif %}
+    </li>
+  {% endfor %}
+</ul>

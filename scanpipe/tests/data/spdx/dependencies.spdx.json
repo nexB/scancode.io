@@ -1,0 +1,112 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT-b74fe5df-e965-415e-ba65-f38421a0695d",
+  "name": "scancodeio_analysis",
+  "documentNamespace": "https://scancode.io/spdxdocs/b74fe5df-e965-415e-ba65-f38421a0695d",
+  "creationInfo": {
+    "created": "2000-01-01T01:02:03Z",
+    "creators": [
+      "Tool: ScanCode.io"
+    ],
+    "licenseListVersion": "3.20"
+  },
+  "packages": [
+    {
+      "name": "a",
+      "SPDXID": "SPDXRef-scancodeio-discoveredpackage-a83a60de-81bc-4bf4-b48c-dc78e0e658a9",
+      "downloadLocation": "NOASSERTION",
+      "licenseConcluded": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "filesAnalyzed": false,
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:type/a"
+        }
+      ]
+    },
+    {
+      "name": "b",
+      "SPDXID": "SPDXRef-scancodeio-discoveredpackage-81147701-285f-485c-ba36-9cd3742790b1",
+      "downloadLocation": "NOASSERTION",
+      "licenseConcluded": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "filesAnalyzed": false,
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:type/b"
+        }
+      ]
+    },
+    {
+      "name": "z",
+      "SPDXID": "SPDXRef-scancodeio-discoveredpackage-e391c33e-d7d0-4a97-a3c3-e947375c53d5",
+      "downloadLocation": "NOASSERTION",
+      "licenseConcluded": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "filesAnalyzed": false,
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:type/z"
+        }
+      ]
+    },
+    {
+      "name": "",
+      "SPDXID": "SPDXRef-scancodeio-discovereddependency-for_package_b",
+      "downloadLocation": "NOASSERTION",
+      "licenseConcluded": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "name": "unresolved",
+      "SPDXID": "SPDXRef-scancodeio-discovereddependency-unresolved",
+      "downloadLocation": "NOASSERTION",
+      "licenseConcluded": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:type/unresolved"
+        }
+      ]
+    }
+  ],
+  "documentDescribes": [
+    "SPDXRef-scancodeio-discoveredpackage-a83a60de-81bc-4bf4-b48c-dc78e0e658a9",
+    "SPDXRef-scancodeio-discoveredpackage-81147701-285f-485c-ba36-9cd3742790b1",
+    "SPDXRef-scancodeio-discoveredpackage-e391c33e-d7d0-4a97-a3c3-e947375c53d5",
+    "SPDXRef-scancodeio-discovereddependency-for_package_b",
+    "SPDXRef-scancodeio-discovereddependency-unresolved"
+  ],
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-scancodeio-discoveredpackage-81147701-285f-485c-ba36-9cd3742790b1",
+      "relatedSpdxElement": "SPDXRef-scancodeio-discoveredpackage-a83a60de-81bc-4bf4-b48c-dc78e0e658a9",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-scancodeio-discovereddependency-for_package_b",
+      "relatedSpdxElement": "SPDXRef-scancodeio-discoveredpackage-81147701-285f-485c-ba36-9cd3742790b1",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-scancodeio-discovereddependency-unresolved",
+      "relatedSpdxElement": "SPDXRef-DOCUMENT-b74fe5df-e965-415e-ba65-f38421a0695d",
+      "relationshipType": "DEPENDENCY_OF"
+    }
+  ],
+  "comment": "Generated with ScanCode.io and provided on an \"AS IS\" BASIS, WITHOUT WARRANTIES\nOR CONDITIONS OF ANY KIND, either express or implied.\nNo content created from ScanCode.io should be considered or used as legal advice.\nConsult an Attorney for any legal advice.\nScanCode.io is a free software code scanning tool from nexB Inc. and others\nlicensed under the Apache License version 2.0.\nScanCode is a trademark of nexB Inc.\nVisit https://github.com/nexB/scancode.io for support and download.\n",
+  "files": []
+}

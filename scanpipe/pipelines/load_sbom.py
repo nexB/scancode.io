@@ -20,6 +20,7 @@
 # ScanCode.io is a free software code scanning tool from nexB Inc. and others.
 # Visit https://github.com/nexB/scancode.io for support and download.
 
+from scanpipe.models import DiscoveredDependency
 from scanpipe.pipelines.scan_codebase import ScanCodebase
 from scanpipe.pipes import resolve
 
@@ -44,7 +45,7 @@ class LoadSBOM(ScanCodebase):
             cls.flag_empty_files,
             cls.flag_ignored_resources,
             cls.get_sbom_inputs,
-            cls.get_packages_from_sboms,
+            cls.get_data_from_sboms,
             cls.create_packages_from_sboms,
             cls.create_dependencies_from_sboms,
         )
@@ -53,13 +54,13 @@ class LoadSBOM(ScanCodebase):
         """Locate all the SBOMs among the codebase resources."""
         self.manifest_resources = resolve.get_manifest_resources(self.project)
 
-    def get_packages_from_sboms(self):
+    def get_data_from_sboms(self):
         """Get packages data from SBOMs."""
-        self.packages = resolve.get_packages(
+        self.packages, self.dependencies = resolve.get_data_from_manifests(
             project=self.project,
             package_registry=resolve.sbom_registry,
             manifest_resources=self.manifest_resources,
-            model="get_packages_from_sboms",
+            model="get_data_from_sboms",
         )
 
     def create_packages_from_sboms(self):
@@ -71,4 +72,11 @@ class LoadSBOM(ScanCodebase):
 
     def create_dependencies_from_sboms(self):
         """Create the dependency relationship declared in the SBOMs."""
+        # TODO: Migrate the CycloneDX behavior too, see get_dependencies_from_manifest
         resolve.create_dependencies_from_packages_extra_data(project=self.project)
+
+        for dependency_data in self.dependencies:
+            DiscoveredDependency.create_from_data(
+                project=self.project,
+                dependency_data=dependency_data,
+            )

@@ -28,6 +28,11 @@
           <a href="{% url 'project_dependencies' project.slug %}">
             {{ project.discovereddependencies_count|intcomma }}
           </a>
+          <a href="{% url 'project_dependency_tree' project.slug %}">
+            <span class="icon">
+              <i class="fa-solid fa-sitemap"></i>
+            </span>
+          </a>
         {% else %}
           <span>0</span>
         {% endif %}

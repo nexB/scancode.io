@@ -1,0 +1,29 @@
+Free content on iamkate.com
+The web was still young when I first went online in 1998. It felt like a utopian dream of free culture and free knowledge. Anyone could contribute, and within weeks I had learnt html and created my first site, hosted in the 10mb of webspace my isp included as standard.
+
+I’ve watched as the dream has become a nightmare of surveillance and monetisation. Companies such as Google and Facebook offer their services for free to the public because their real products are their advertising networks powered by the personal data of their visitors.
+
+The only concern of these companies and their shareholders is to maximise their income from advertising, regardless of the costs to society. They use dubious schemes to avoid paying tax. They encourage addiction and risk the mental health of their visitors. They threaten democratic institutions.
+
+I have little influence over the wider web, but I can control my small part of it, creating a haven that remains true to the original dream. This page describes my approach to copyright, my promise to protect the privacy of my visitors, and my commitment to transparency.
+
+Copyright
+Copyright limits creativity and holds back progress by restricting our rights to build upon the works of others. Copyleft licences attempt to use copyright against itself, but “the master’s tools will never dismantle the master’s house”, as Audre Lorde remarked in a different context.
+
+All content on my site is released under the terms of the Creative Commons CC0 1.0 Universal Legal Code. This means I have waived all copyright and related rights to the extent possible under law, with the intention of dedicating the content to the public domain. You can use and adapt it without attribution.
+
+Privacy
+Every site is hosted on a server, which is usually operated by a third party due to the expertise needed to manage servers securely. Most sites are accessed indirectly through the servers of a content delivery network, which protects the original server from attacks that could disable the site.
+
+My site is hosted on Cloudflare Pages. Cloudflare is both the host and the content delivery network, avoiding the need to trust two separate third parties. Cloudflare have a strong commitment to privacy and data protection, and frequently write about developing systems to protect visitor privacy.
+
+Almost every site today includes code that tracks visitors for statistical and advertising purposes. Often the site owner includes code with the deliberate aim of tracking their visitors, but sometimes they just want to include a feature provided by a third party, and that provider includes their own tracking code.
+
+My site doesn’t include any tracking code, and doesn’t load any code from third parties. It doesn’t have a cookie banner because it doesn’t use cookies. Instead of an invasive analytics system, Cloudflare Web Analytics gives me the most important statistics without tracking individual visitors.
+
+Transparency
+You probably don’t know me, and shouldn’t have to trust me. Instead, you should be able to check security and privacy claims for yourself. Unfortunately most sites today use a process called code minification, which makes them faster but also makes it harder for other people to understand their code.
+
+The Mozilla Observatory report for my site confirms the presence of various security and privacy features, resulting in a perfect A+ rating. One of these features, the content security policy, prevents browsers from loading code and other resources from third parties.
+
+My site doesn’t need to use code minification in order to load quickly due to its simple design, efficient implementation, and absence of resources loaded from third parties. As a result, other software developers can easily understand how the layout, styling, and interactive features are created.

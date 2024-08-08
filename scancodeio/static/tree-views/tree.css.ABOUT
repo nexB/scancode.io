@@ -1,0 +1,10 @@
+about_resource: tree.css
+name: css-tree-views
+homepage_url: https://iamkate.com/code/tree-views/
+description: A tree view (collapsible list) can be created using only html and css, without
+  the need for JavaScript. Accessibility software will see the tree view as lists nested inside
+  disclosure widgets, and the standard keyboard interaction is supported automatically.
+license_expression: cc0-1.0
+licenses:
+  - key: cc0-1.0
+    name: cc0-1.0
