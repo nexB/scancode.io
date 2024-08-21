@@ -410,9 +410,11 @@ class ProjectFilterSet(FilterSetUtilsMixin, django_filters.FilterSet):
 
         # Default filtering by "Active" projects.
         if not data or data.get("is_archived", "") == "":
-            self.queryset = self.queryset.filter(is_archived=False)
+            self.queryset = self.queryset.active()
 
-        active_count = Project.objects.filter(is_archived=False).count()
+        active_count = Project.objects.filter(
+            is_archived=False, is_marked_for_deletion=False
+        ).count()
         archived_count = Project.objects.filter(is_archived=True).count()
         self.filters["is_archived"].extra["widget"] = BulmaLinkWidget(
             choices=[

@@ -1154,7 +1154,10 @@ class ProjectActionView(ConditionalLoginRequired, generic.ListView):
 
         try:
             project = Project.objects.get(pk=project_uuid)
-            getattr(project, action)(**action_kwargs)
+            if action == "delete":
+                project.delete_in_background()
+            else:
+                getattr(project, action)(**action_kwargs)
             return True
         except Project.DoesNotExist:
             messages.error(self.request, f"Project {project_uuid} does not exist.")
