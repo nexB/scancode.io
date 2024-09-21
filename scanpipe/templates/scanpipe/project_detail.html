@@ -26,9 +26,8 @@
         </nav>
         <div class="subtitle is-size-6">
           <span class="has-text-grey">
-            <span title="{{ project.created_date|date:'N j, Y, P T' }}">
-              Created {{ project.created_date|naturaltime }}
-            </span>
+            <span title="{{ project.created_date|naturaltime }}">
+              Created {{ project.created_date|date:'Y-m-d H:i' }}</span>
           </span>
           {% include 'scanpipe/includes/project_labels.html' with labels=labels only %}
           <a class="modal-button is-size-7" data-target="add-labels-modal" aria-haspopup="true">
