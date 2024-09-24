@@ -29,6 +29,7 @@ import uuid
 from collections import Counter
 from collections import defaultdict
 from contextlib import suppress
+from datetime import datetime
 from itertools import groupby
 from operator import itemgetter
 from pathlib import Path
@@ -74,6 +75,8 @@ from extractcode import EXTRACT_SUFFIX
 from licensedcode.cache import build_spdx_license_expression
 from licensedcode.cache import get_licensing
 from matchcode_toolkit.fingerprinting import IGNORED_DIRECTORY_FINGERPRINTS
+from ossf_scorecard.contrib.django.models import PackageScoreMixin
+from ossf_scorecard.contrib.django.models import ScorecardChecksMixin
 from packagedcode.models import build_package_uid
 from packagedcode.utils import get_base_purl
 from packageurl import PackageURL
@@ -1833,10 +1836,10 @@ class Run(UUIDPKModel, ProjectRelatedModel, AbstractTaskFieldsModel):
     scancodeio_version = models.CharField(max_length=100, blank=True)
     description = models.TextField(blank=True)
     current_step = models.CharField(max_length=256, blank=True)
-    selected_groups = models.JSONField(
+    selected_steps = models.JSONField(
         null=True, blank=True, validators=[validate_none_or_list]
     )
-    selected_steps = models.JSONField(
+    selected_groups = models.JSONField(
         null=True, blank=True, validators=[validate_none_or_list]
     )
 
@@ -3896,6 +3899,109 @@ class DiscoveredDependency(
             version=self.version,
             external_refs=external_refs,
         )
+
+
+class PackageScore(UUIDPKModel, PackageScoreMixin):
+    def __str__(self):
+        return self.score or str(self.uuid)
+
+    discovered_package = models.ForeignKey(
+        DiscoveredPackage,
+        related_name="discovered_packages_score",
+        help_text=_("The package for which the score is given"),
+        on_delete=models.CASCADE,
+        editable=False,
+        blank=True,
+        null=True,
+    )
+
+    @classmethod
+    @transaction.atomic()
+    def create_from_scorecard_data(cls, discovered_package, scorecard_data,
+                             scoring_tool=None):
+        """Create ScoreCard object from scorecard data and discovered package"""
+        final_data = {
+            "score": scorecard_data.score,
+            "scoring_tool_version": scorecard_data.scoring_tool_version,
+            "scoring_tool_documentation_url": (
+                scorecard_data.scoring_tool_documentation_url
+            ),
+        }
+
+        date_str = scorecard_data.score_date
+
+        formats = ["%Y-%m-%d", "%Y-%m-%dT%H:%M:%SZ"]
+
+        if date_str:
+            naive_datetime = None
+
+            for fmt in formats:
+                try:
+                    naive_datetime = datetime.strptime(date_str, fmt)
+                except ValueError:
+                    continue
+
+            score_date = timezone.make_aware(
+                naive_datetime, timezone.get_current_timezone()
+            )
+
+        else:
+            score_date = timezone.now()
+
+        final_data["score_date"] = score_date
+
+        scorecard_object = cls.objects.create(
+            **final_data,
+            discovered_package=discovered_package,
+            scoring_tool=scoring_tool,
+        )
+
+        for check in scorecard_data.checks:
+            ScorecardCheck.objects.create(
+                check_name=check.check_name,
+                check_score=check.check_score,
+                reason=check.reason or "",
+                details=check.details or [],
+                for_package_score=scorecard_object,
+            )
+
+        return scorecard_object
+
+    @classmethod
+    def create_from_package_and_scorecard(cls, scorecard_data, package):
+        score_object = cls.create_from_data(
+            discovered_package=package,
+            scorecard_data=scorecard_data,
+            scoring_tool="ossf_scorecard",
+        )
+        score_object.save()
+
+
+class ScorecardCheck(UUIDPKModel, ScorecardChecksMixin):
+    def __str__(self):
+        return self.check_score or str(self.uuid)
+
+    for_package_score = models.ForeignKey(
+        PackageScore,
+        related_name="discovered_packages_score_checks",
+        help_text=_("The checks for which the score is given"),
+        on_delete=models.CASCADE,
+        editable=False,
+        blank=True,
+        null=True,
+    )
+
+    @classmethod
+    def create_from_data(cls, package_score, check):
+        """Create a ScorecardCheck instance from provided data."""
+        final_data = {
+            "check_name": check.get("name"),
+            "check_score": check.get("score"),
+            "reason": check.get("reason"),
+            "details": check.get("details", []),
+            "for_package_score": package_score,
+        }
+        return cls.objects.create(**final_data)
 
 
 def normalize_package_url_data(purl_mapping, ignore_nulls=False):
