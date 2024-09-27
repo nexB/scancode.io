@@ -398,6 +398,12 @@ location on disk using::
 
     SCANCODEIO_NETRC_LOCATION="~/.netrc"
 
+If you are deploying ScanCode.io using Docker and you wish to use a netrc file,
+you can provide it to the Docker container by moving the netrc file to
+``/etc/scancodeio/.netrc`` and then updating the ``.env`` file with the line::
+
+    SCANCODEIO_NETRC_LOCATION="/etc/scancodeio/.netrc"
+
 .. _scancodeio_settings_skopeo_credentials:
 
 SCANCODEIO_SKOPEO_CREDENTIALS
