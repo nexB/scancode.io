@@ -29,7 +29,7 @@
         {% if input_source.filename %}
           {{ input_source.filename }}
         {% else %}
-          {{ input_source.download_url }}
+          <a href="{{ input_source.download_url }}" title="{{ input_source.download_url }}">{{ input_source.download_url }}</a>
         {% endif %}
       </div>
       <div class="is-flex is-size-7">
