@@ -28,6 +28,7 @@ from django.test import TestCase
 from scanpipe import pipes
 from scanpipe.models import Project
 from scanpipe.pipes import resolve
+from scanpipe.pipes import spdx
 from scanpipe.pipes.input import copy_inputs
 from scanpipe.pipes.scancode import extract_archives
 from scanpipe.tests import make_package
@@ -133,12 +134,20 @@ class ScanPipeResolvePipesTest(TestCase):
         expected = {"extra_data": {}, "name": "project"}
         self.assertEqual([expected], package)
 
-    def test_scanpipe_pipes_resolve_spdx_package_to_discovered_package_data(self):
+    def test_scanpipe_pipes_resolve_get_spdx_document_from_file(self):
+        input_location = self.data / "spdx" / "SPDXJSONExample-v2.3.spdx.json"
+        spdx_document = resolve.get_spdx_document_from_file(input_location)
+        self.assertIsInstance(spdx_document, dict)
+        self.assertEqual("SPDXRef-DOCUMENT", spdx_document["SPDXID"])
+        self.assertEqual("SPDX-2.3", spdx_document["spdxVersion"])
+
+    def test_scanpipe_pipes_resolve_spdx_package_to_package_data(self):
         p1 = Project.objects.create(name="Analysis")
         package = pipes.update_or_create_package(p1, package_data1)
         package_spdx = package.as_spdx()
-        package_data = resolve.spdx_package_to_discovered_package_data(package_spdx)
+        package_data = resolve.spdx_package_to_package_data(package_spdx)
         expected = {
+            "package_uid": package.spdx_id,
             "name": "adduser",
             "download_url": "https://download.url/package.zip",
             "declared_license_expression": "gpl-2.0 AND gpl-2.0-plus",
@@ -161,6 +170,35 @@ class ScanPipeResolvePipesTest(TestCase):
             "md5": "76cf50f29e47676962645632737365a7",
         }
         self.assertEqual(expected, package_data)
+
+    def test_scanpipe_pipes_spdx_relationship_to_dependency_data(self):
+        spdx_relationship_data = {
+            "spdxElementId": "SPDXRef-package1",
+            "relatedSpdxElement": "SPDXRef-package2",
+            "relationshipType": "CONTAINS",
+        }
+        spdx_relationship = spdx.Relationship.from_data(spdx_relationship_data)
+        dependency_data = resolve.spdx_relationship_to_dependency_data(
+            spdx_relationship
+        )
+        expected = {
+            "for_package_uid": "SPDXRef-package1",
+            "resolve_to_package_uid": "SPDXRef-package2",
+            "is_runtime": True,
+            "is_resolved": True,
+            "is_direct": True,
+        }
+        self.assertEqual(expected, dependency_data)
+
+    def test_scanpipe_pipes_resolve_spdx_packages(self):
+        input_location = self.data / "spdx" / "SPDXJSONExample-v2.3.spdx.json"
+        packages_data = resolve.resolve_spdx_packages(input_location)
+        self.assertEqual(4, len(packages_data))
+
+    def test_scanpipe_pipes_resolve_spdx_dependencies(self):
+        input_location = self.data / "spdx" / "SPDXJSONExample-v2.3.spdx.json"
+        dependencies_data = resolve.resolve_spdx_dependencies(input_location)
+        self.assertEqual(7, len(dependencies_data))
 
     def test_scanpipe_resolve_get_manifest_resources(self):
         project1 = Project.objects.create(name="Analysis")

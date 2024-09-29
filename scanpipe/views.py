@@ -1928,6 +1928,7 @@ class DiscoveredPackageDetailsView(
                     "field_name": "other_license_expression_spdx",
                     "label": "Other license expression (SPDX)",
                 },
+                "compliance_alert",
                 "extracted_license_statement",
                 "copyright",
                 "holder",
@@ -2304,6 +2305,11 @@ class ProjectDependencyTreeView(ConditionalLoginRequired, generic.DetailView):
         root_packages = project.discoveredpackages.root_packages().order_by("name")
         project_children = [self.get_node(package) for package in root_packages]
 
+        # Dependencies with no assigned `for_packages`.
+        project_dependencies = project.discovereddependencies.project_dependencies()
+        for dependency in project_dependencies:
+            project_children.append({"name": dependency.package_url})
+
         project_tree = {
             "name": project.name,
             "children": project_children,
@@ -2312,11 +2318,28 @@ class ProjectDependencyTreeView(ConditionalLoginRequired, generic.DetailView):
         return project_tree
 
     def get_node(self, package):
-        node = {"name": str(package)}
+        node = {
+            "name": str(package),
+            "url": package.get_absolute_url(),
+            "compliance_alert": package.compliance_alert,
+            "is_vulnerable": package.is_vulnerable,
+        }
+        # Resolved dependencies
         children = [
             self.get_node(child_package)
             for child_package in package.children_packages.all()
         ]
+
+        unresolved_dependencies = package.declared_dependencies.unresolved()
+        for dependency in unresolved_dependencies:
+            children.append(
+                {
+                    "name": dependency.package_url,
+                    "is_vulnerable": dependency.is_vulnerable,
+                }
+            )
+
         if children:
             node["children"] = children
+
         return node

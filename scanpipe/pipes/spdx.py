@@ -27,7 +27,6 @@ from dataclasses import dataclass
 from dataclasses import field
 from datetime import datetime
 from pathlib import Path
-from typing import List  # Python 3.8 compatibility
 
 SPDX_SPEC_VERSION = "2.3"
 SPDX_LICENSE_LIST_VERSION = "3.20"
@@ -271,7 +270,7 @@ class ExtractedLicensingInfo:
 
     name: str = ""
     comment: str = ""
-    see_alsos: List[str] = field(default_factory=list)
+    see_alsos: list[str] = field(default_factory=list)
 
     def as_dict(self):
         """Return the data as a serializable dict."""
@@ -331,9 +330,9 @@ class Package:
     comment: str = ""
     license_comments: str = ""
 
-    checksums: List[Checksum] = field(default_factory=list)
-    external_refs: List[ExternalRef] = field(default_factory=list)
-    attribution_texts: List[str] = field(default_factory=list)
+    checksums: list[Checksum] = field(default_factory=list)
+    external_refs: list[ExternalRef] = field(default_factory=list)
+    attribution_texts: list[str] = field(default_factory=list)
 
     def as_dict(self):
         """Return the data as a serializable dict."""
@@ -426,18 +425,18 @@ class File:
 
     spdx_id: str
     name: str
-    checksums: List[Checksum] = field(default_factory=list)
+    checksums: list[Checksum] = field(default_factory=list)
 
     license_concluded: str = "NOASSERTION"
     copyright_text: str = "NOASSERTION"
-    license_in_files: List[str] = field(default_factory=list)
-    contributors: List[str] = field(default_factory=list)
+    license_in_files: list[str] = field(default_factory=list)
+    contributors: list[str] = field(default_factory=list)
     notice_text: str = ""
     # Supported values:
     # SOURCE | BINARY | ARCHIVE | APPLICATION | AUDIO | IMAGE | TEXT | VIDEO |
     # DOCUMENTATION | SPDX | OTHER
-    types: List[str] = field(default_factory=list)
-    attribution_texts: List[str] = field(default_factory=list)
+    types: list[str] = field(default_factory=list)
+    attribution_texts: list[str] = field(default_factory=list)
     comment: str = ""
     license_comments: str = ""
 
@@ -522,6 +521,18 @@ class Relationship:
             comment=data.get("comment"),
         )
 
+    @property
+    def is_dependency_relationship(self):
+        """
+        Return True if this relationship type implies that the spdx_id element
+        is a dependency of related_spdx_id.
+        """
+        reverse_dependency_types = ["ANCESTOR_OF", "CONTAINS", "DEPENDS_ON"]
+        # Every others types implies that the spdx_id element is a dependency of
+        # related_spdx_id. Such as:
+        # "DEPENDENCY_OF", "DESCENDANT_OF", "PACKAGE_OF", "CONTAINED_BY", ...
+        return self.relationship.upper() not in reverse_dependency_types
+
 
 @dataclass
 class Document:
@@ -533,16 +544,16 @@ class Document:
     name: str
     namespace: str
     creation_info: CreationInfo
-    packages: List[Package]
+    packages: list[Package]
 
     spdx_id: str = "SPDXRef-DOCUMENT"
     version: str = SPDX_SPEC_VERSION
     data_license: str = "CC0-1.0"
     comment: str = ""
 
-    files: List[File] = field(default_factory=list)
-    extracted_licenses: List[ExtractedLicensingInfo] = field(default_factory=list)
-    relationships: List[Relationship] = field(default_factory=list)
+    files: list[File] = field(default_factory=list)
+    extracted_licenses: list[ExtractedLicensingInfo] = field(default_factory=list)
+    relationships: list[Relationship] = field(default_factory=list)
 
     def as_dict(self):
         """Return the SPDX document as a serializable dict."""

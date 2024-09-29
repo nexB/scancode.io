@@ -1851,14 +1851,34 @@ class ScanPipeModelsTest(TestCase):
         z = make_package(project, "pkg:type/z")
         # Project -> A -> B -> C
         # Project -> Z
-        make_dependency(project, for_package=a, resolved_to_package=b)
-        make_dependency(project, for_package=b, resolved_to_package=c)
+        a_to_b = make_dependency(
+            project, for_package=a, resolved_to_package=b, dependency_uid="a_to_b"
+        )
+        b_to_c = make_dependency(
+            project, for_package=b, resolved_to_package=c, dependency_uid="b_to_c"
+        )
+        unresolved_dependency = make_dependency(project, dependency_uid="unresolved")
+
+        self.assertFalse(a_to_b.is_project_dependency)
+        self.assertTrue(a_to_b.is_for_package)
+        self.assertTrue(a_to_b.is_resolved_to_package)
+        self.assertTrue(unresolved_dependency.is_project_dependency)
+        self.assertFalse(unresolved_dependency.is_for_package)
+        self.assertFalse(unresolved_dependency.is_resolved_to_package)
 
         project_packages_qs = project.discoveredpackages.order_by("name")
         root_packages = project_packages_qs.root_packages()
         self.assertEqual([a, z], list(root_packages))
         non_root_packages = project_packages_qs.non_root_packages()
         self.assertEqual([b, c], list(non_root_packages))
+
+        dependency_qs = project.discovereddependencies
+        self.assertEqual(
+            [unresolved_dependency], list(dependency_qs.project_dependencies())
+        )
+        self.assertEqual([a_to_b, b_to_c], list(dependency_qs.package_dependencies()))
+        self.assertEqual([a_to_b, b_to_c], list(dependency_qs.resolved()))
+        self.assertEqual([unresolved_dependency], list(dependency_qs.unresolved()))
 
     @skipIf(sys.platform != "linux", "Ordering differs on macOS.")
     def test_scanpipe_codebase_resource_model_walk_method(self):
@@ -2710,10 +2730,11 @@ class ScanPipeModelsTransactionTest(TransactionTestCase):
     def test_scanpipe_discovered_dependency_model_create_from_data(self):
         project1 = Project.objects.create(name="Analysis")
 
-        DiscoveredPackage.create_from_data(project1, package_data1)
+        package1 = DiscoveredPackage.create_from_data(project1, package_data1)
         CodebaseResource.objects.create(
             project=project1, path="daglib-0.3.2.tar.gz-extract/daglib-0.3.2/PKG-INFO"
         )
+        # Unresolved dependency
         dependency = DiscoveredDependency.create_from_data(
             project1, dependency_data1, strip_datafile_path_root=False
         )
@@ -2737,23 +2758,17 @@ class ScanPipeModelsTransactionTest(TransactionTestCase):
             dependency.datafile_path,
         )
         self.assertEqual("pypi_sdist_pkginfo", dependency.datasource_id)
+        self.assertFalse(dependency.is_project_dependency)
+        self.assertTrue(dependency.is_for_package)
+        self.assertFalse(dependency.is_resolved_to_package)
 
-        # Test field validation when using create_from_data
-        dependency_count = DiscoveredDependency.objects.count()
-        incomplete_data = dict(dependency_data1)
-        incomplete_data["dependency_uid"] = ""
-        self.assertIsNone(
-            DiscoveredDependency.create_from_data(project1, incomplete_data)
+        # Resolved project dependency, resolved_to_package provided as arg
+        dependency2 = DiscoveredDependency.create_from_data(
+            project1, dependency_data={}, resolved_to_package=package1
         )
-        self.assertEqual(dependency_count, DiscoveredDependency.objects.count())
-        message = project1.projectmessages.latest("created_date")
-        self.assertEqual("DiscoveredDependency", message.model)
-        self.assertEqual(ProjectMessage.Severity.WARNING, message.severity)
-        expected_message = "No values for the following required fields: dependency_uid"
-        self.assertEqual(expected_message, message.description)
-        self.assertEqual(dependency_data1["purl"], message.details["purl"])
-        self.assertEqual("", message.details["dependency_uid"])
-        self.assertEqual("", message.traceback)
+        self.assertTrue(dependency2.is_project_dependency)
+        self.assertFalse(dependency2.is_for_package)
+        self.assertTrue(dependency2.is_resolved_to_package)
 
     def test_scanpipe_discovered_package_model_unique_package_uid_in_project(self):
         project1 = Project.objects.create(name="Analysis")

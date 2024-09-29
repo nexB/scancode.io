@@ -1,0 +1,23 @@
+{% if node.name %}
+  {{ node.name }}
+{% else %}
+  Missing data
+{% endif %}
+
+<span class="ml-1">
+  {% if node.url %}
+    <a href="{{ node.url }}" target="_blank">
+      <i class="fa-solid fa-square-arrow-up-right fa-sm" title="View details"></i>
+    </a>
+  {% endif %}
+  {% if node.compliance_alert == "warning" or node.compliance_alert == "error" %}
+    <a href="{{ node.url }}#terms" target="_blank" class="{% if node.compliance_alert == 'warning' %}has-text-warning{% else %}has-text-danger{% endif %}">
+      <i class="fa-solid fa-scale-balanced fa-sm" title="Compliance alert"></i>
+    </a>
+  {% endif %}
+  {% if node.is_vulnerable %}
+    <a href="{{ node.url }}#vulnerabilities" target="_blank">
+      <i class="fa-solid fa-bug fa-sm has-text-danger" title="Vulnerabilities"></i>
+    </a>
+  {% endif %}
+</span>

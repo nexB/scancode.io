@@ -57,12 +57,27 @@ def resolve_manifest_resources(resource, package_registry):
     return packages
 
 
-def get_packages(project, package_registry, manifest_resources, model=None):
+def get_dependencies_from_manifest(resource):
+    """Get dependency data from resource."""
+    dependencies = []
+
+    default_package_type = get_default_package_type(resource.location)
+    if not default_package_type:
+        return []
+
+    if default_package_type == "spdx":
+        dependencies = resolve_spdx_dependencies(input_location=resource.location)
+
+    return dependencies
+
+
+def get_data_from_manifests(project, package_registry, manifest_resources, model=None):
     """
-    Get package data from package manifests/lockfiles/SBOMs or
-    get package data for resolved packages from package requirements.
+    Get package and dependency data from package manifests/lockfiles/SBOMs or
+    for resolved packages from package requirements.
     """
     resolved_packages = []
+    resolved_dependencies = []
     sboms_headers = {}
 
     if not manifest_resources.exists():
@@ -73,7 +88,8 @@ def get_packages(project, package_registry, manifest_resources, model=None):
         return []
 
     for resource in manifest_resources:
-        if packages := resolve_manifest_resources(resource, package_registry):
+        packages = resolve_manifest_resources(resource, package_registry)
+        if packages:
             resolved_packages.extend(packages)
             if headers := get_manifest_headers(resource):
                 sboms_headers[resource.name] = headers
@@ -84,10 +100,14 @@ def get_packages(project, package_registry, manifest_resources, model=None):
                 object_instance=resource,
             )
 
+        dependencies = get_dependencies_from_manifest(resource)
+        if dependencies:
+            resolved_dependencies.extend(dependencies)
+
     if sboms_headers:
         project.update_extra_data({"sboms_headers": sboms_headers})
 
-    return resolved_packages
+    return resolved_packages, resolved_dependencies
 
 
 def create_packages_and_dependencies(project, packages, resolved=False):
@@ -136,7 +156,7 @@ def create_dependencies_from_packages_extra_data(project):
 
         for bom_ref in for_package.extra_data.get("depends_on", []):
             try:
-                resolved_to_package = project_packages.get(extra_data__bom_ref=bom_ref)
+                resolved_to_package = project_packages.get(package_uid=bom_ref)
             except (ObjectDoesNotExist, MultipleObjectsReturned):
                 project.add_error(
                     description=f"Could not find resolved_to package entry: {bom_ref}.",
@@ -265,8 +285,12 @@ def convert_spdx_expression(license_expression_spdx):
     return get_license_detections_and_expression(license_expression_spdx)[1]
 
 
-def spdx_package_to_discovered_package_data(spdx_package):
+def spdx_package_to_package_data(spdx_package):
+    """Convert the provided spdx_package into package_data."""
     package_url_dict = {}
+    # Store the original "SPDXID" as package_uid for dependencies resolution.
+    package_uid = spdx_package.spdx_id
+
     for ref in spdx_package.external_refs:
         if ref.type == "purl":
             purl = ref.locator
@@ -283,6 +307,7 @@ def spdx_package_to_discovered_package_data(spdx_package):
         declared_expression = convert_spdx_expression(declared_license_expression_spdx)
 
     package_data = {
+        "package_uid": package_uid,
         "name": spdx_package.name,
         "download_url": spdx_package.download_location,
         "declared_license_expression": declared_expression,
@@ -305,8 +330,28 @@ def spdx_package_to_discovered_package_data(spdx_package):
     }
 
 
-def resolve_spdx_packages(input_location):
-    """Resolve the packages from the `input_location` SPDX document file."""
+def spdx_relationship_to_dependency_data(spdx_relationship):
+    """Convert the provided spdx_relationship into dependency_data."""
+    # spdx_id is a dependency of related_spdx_id
+    if spdx_relationship.is_dependency_relationship:
+        for_package_uid = spdx_relationship.related_spdx_id
+        resolve_to_package_uid = spdx_relationship.spdx_id
+    else:  # spdx_id depends on related_spdx_id
+        for_package_uid = spdx_relationship.spdx_id
+        resolve_to_package_uid = spdx_relationship.related_spdx_id
+
+    dependency_data = {
+        "for_package_uid": for_package_uid,
+        "resolve_to_package_uid": resolve_to_package_uid,
+        "is_runtime": True,
+        "is_resolved": True,
+        "is_direct": True,
+    }
+    return dependency_data
+
+
+def get_spdx_document_from_file(input_location):
+    """Return the loaded SPDX document from the `input_location` file."""
     input_path = Path(input_location)
     spdx_document = json.loads(input_path.read_text())
 
@@ -315,9 +360,29 @@ def resolve_spdx_packages(input_location):
     except Exception as e:
         raise Exception(f'SPDX document "{input_path.name}" is not valid: {e}')
 
+    return spdx_document
+
+
+def resolve_spdx_packages(input_location):
+    """Resolve the packages from the `input_location` SPDX document file."""
+    spdx_document = get_spdx_document_from_file(input_location)
     return [
-        spdx_package_to_discovered_package_data(spdx.Package.from_data(spdx_package))
+        spdx_package_to_package_data(spdx.Package.from_data(spdx_package))
         for spdx_package in spdx_document.get("packages", [])
+    ]
+
+
+def resolve_spdx_dependencies(input_location):
+    """Resolve the dependencies from the `input_location` SPDX document file."""
+    spdx_document = get_spdx_document_from_file(input_location)
+    spdx_relationships = [
+        spdx.Relationship.from_data(spdx_relationship)
+        for spdx_relationship in spdx_document.get("relationships", [])
+    ]
+
+    return [
+        spdx_relationship_to_dependency_data(spdx_relationship)
+        for spdx_relationship in spdx_relationships
     ]
 
 

@@ -529,6 +529,28 @@ def _get_spdx_extracted_licenses(license_expressions):
     return extracted_licenses
 
 
+def get_dependency_as_spdx_relationship(dependency, document_spdx_id, packages_as_spdx):
+    """Return a spdx.Relationship crafted from the provided ``dependency`` instance."""
+    if dependency.is_for_package:  # Package dependency
+        parent_id = dependency.for_package.spdx_id
+    else:  # Project dependency
+        parent_id = document_spdx_id
+
+    if dependency.is_resolved_to_package:  # Resolved to a Package
+        child_id = dependency.resolved_to_package.spdx_id
+    else:  # Not resolved to a Package (only package_url value is available)
+        dependency_as_package = dependency.as_spdx_package()
+        packages_as_spdx.append(dependency_as_package)
+        child_id = dependency_as_package.spdx_id
+
+    spdx_relationship = spdx.Relationship(
+        spdx_id=child_id,
+        related_spdx_id=parent_id,
+        relationship="DEPENDENCY_OF",
+    )
+    return spdx_relationship
+
+
 def to_spdx(project, include_files=False):
     """
     Generate output for the provided ``project`` in SPDX document format.
@@ -540,6 +562,7 @@ def to_spdx(project, include_files=False):
     discoveredpackage_qs = get_queryset(project, "discoveredpackage")
     discovereddependency_qs = get_queryset(project, "discovereddependency")
 
+    document_spdx_id = f"SPDXRef-DOCUMENT-{project.uuid}"
     packages_as_spdx = []
     license_expressions = []
     relationships = []
@@ -550,15 +573,12 @@ def to_spdx(project, include_files=False):
             license_expressions.append(license_expression)
 
     for dependency in discovereddependency_qs:
-        packages_as_spdx.append(dependency.as_spdx())
-        if dependency.for_package:
-            relationships.append(
-                spdx.Relationship(
-                    spdx_id=dependency.spdx_id,
-                    related_spdx_id=dependency.for_package.spdx_id,
-                    relationship="DEPENDENCY_OF",
-                )
-            )
+        spdx_relationship = get_dependency_as_spdx_relationship(
+            dependency,
+            document_spdx_id,
+            packages_as_spdx,
+        )
+        relationships.append(spdx_relationship)
 
     files_as_spdx = []
     if include_files:
@@ -568,6 +588,7 @@ def to_spdx(project, include_files=False):
         ]
 
     document = spdx.Document(
+        spdx_id=document_spdx_id,
         name=f"scancodeio_{project.name}",
         namespace=f"https://scancode.io/spdxdocs/{project.uuid}",
         creation_info=spdx.CreationInfo(tool=f"ScanCode.io-{scancodeio_version}"),

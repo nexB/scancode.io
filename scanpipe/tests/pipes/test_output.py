@@ -370,6 +370,47 @@ class ScanPipeOutputPipesTest(TestCase):
         self.assertEqual(expected, license_infos["seeAlsos"])
         self.assertTrue(license_infos["extractedText"].startswith("License:"))
 
+    @mock.patch("uuid.uuid4")
+    def test_scanpipe_pipes_outputs_to_spdx_dependencies(self, mock_uuid4):
+        forced_uuid = "b74fe5df-e965-415e-ba65-f38421a0695d"
+        mock_uuid4.return_value = forced_uuid
+        project = Project.objects.create(name="Analysis", uuid=forced_uuid)
+
+        a = make_package(
+            project, "pkg:type/a", uuid="a83a60de-81bc-4bf4-b48c-dc78e0e658a9"
+        )
+        b = make_package(
+            project, "pkg:type/b", uuid="81147701-285f-485c-ba36-9cd3742790b1"
+        )
+        # 1. Package resolved dependency
+        make_dependency(project, for_package=a, resolved_to_package=b)
+        # 2. Package unresolved dependency
+        make_dependency(project, for_package=b, dependency_uid="for_package_b")
+        # 3. Project unresolved dependency
+        unresolved_dependency = make_dependency(project, dependency_uid="unresolved")
+        unresolved_dependency.set_package_url("pkg:type/unresolved")
+        unresolved_dependency.save()
+        # 4. Project package
+        make_package(project, "pkg:type/z", uuid="e391c33e-d7d0-4a97-a3c3-e947375c53d5")
+
+        self.assertEqual(3, project.discoveredpackages.count())
+        self.assertEqual(3, project.discovereddependencies.count())
+
+        output_file = output.to_spdx(project=project)
+        results_json = json.loads(output_file.read_text())
+        self.assertEqual(5, len(results_json["packages"]))
+        self.assertEqual(3, len(results_json["relationships"]))
+
+        # Patch the `created` date and tool version
+        results_json["creationInfo"]["created"] = "2000-01-01T01:02:03Z"
+        results_json["creationInfo"]["creators"] = ["Tool: ScanCode.io"]
+        # Files ordering is system dependent, excluded for now
+        results_json["files"] = []
+        results = json.dumps(results_json, indent=2)
+
+        expected_file = self.data / "spdx" / "dependencies.spdx.json"
+        self.assertResultsEqual(expected_file, results)
+
     def test_scanpipe_pipes_outputs_make_unknown_license_object(self):
         licensing = get_licensing()
         parsed_expression = licensing.parse("some-unknown-license")

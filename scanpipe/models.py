@@ -3591,6 +3591,18 @@ class DiscoveredPackage(
 class DiscoveredDependencyQuerySet(
     PackageURLQuerySetMixin, VulnerabilityQuerySetMixin, ProjectRelatedQuerySet
 ):
+    def project_dependencies(self):
+        return self.filter(for_package__isnull=True)
+
+    def package_dependencies(self):
+        return self.filter(for_package__isnull=False)
+
+    def resolved(self):
+        return self.filter(resolved_to_package__isnull=False)
+
+    def unresolved(self):
+        return self.filter(resolved_to_package__isnull=True)
+
     def prefetch_for_serializer(self):
         """
         Optimized prefetching for a QuerySet to be consumed by the
@@ -3624,6 +3636,15 @@ class DiscoveredDependency(
     system and application packages discovered in the code under analysis.
     Dependencies are usually collected from parsed package data such as a package
     manifest or lockfile.
+
+    This class manages dependencies with the following considerations:
+
+    1. A dependency can be associated with a Package via the "for_package" field.
+       In this case, it is termed a "Package's dependency". If there is no such
+       association, the dependency is considered a "Project's dependency".
+
+    2. A dependency can also be linked to a Package through the "resolved_to_package"
+       field. When this link exists, the dependency is considered "resolved".
     """
 
     # Overrides the `project` field to set the proper `related_name`.
@@ -3774,6 +3795,18 @@ class DiscoveredDependency(
         if self.datafile_resource:
             return self.datafile_resource.path
 
+    @property
+    def is_project_dependency(self):
+        return not bool(self.for_package_id)
+
+    @property
+    def is_for_package(self):
+        return bool(self.for_package_id)
+
+    @property
+    def is_resolved_to_package(self):
+        return bool(self.resolved_to_package_id)
+
     @classmethod
     def create_from_data(
         cls,
@@ -3789,6 +3822,12 @@ class DiscoveredDependency(
         Create and returns a DiscoveredDependency for a `project` from the
         `dependency_data`.
 
+        The `for_package` and `resolved_to_package` FK can be provided as args or
+        in the dependency_data providing the `for_package_uid` and
+        `resolve_to_package_uid`.
+        Note that a dependency without a `for_package` FK is a project dependency and
+        a dependency without a `resolve_to_package` is unresolved.
+
         If `strip_datafile_path_root` is True, then `create_from_data()` will
         strip the root path segment from the `datafile_path` of
         `dependency_data` before looking up the corresponding CodebaseResource
@@ -3797,51 +3836,36 @@ class DiscoveredDependency(
         not stripped for `datafile_path`.
         """
         dependency_data = dependency_data.copy()
-        required_fields = ["purl", "dependency_uid"]
-        missing_values = [
-            field_name
-            for field_name in required_fields
-            if not dependency_data.get(field_name)
-        ]
+        project_packages_qs = project.discoveredpackages
 
-        if missing_values:
-            message = (
-                f"No values for the following required fields: "
-                f"{', '.join(missing_values)}"
+        if not dependency_data.get("dependency_uid"):
+            dependency_data["dependency_uid"] = str(uuid.uuid4())
+
+        for_package_uid = dependency_data.get("for_package_uid")
+        if not for_package and for_package_uid:
+            for_package = project_packages_qs.get_or_none(package_uid=for_package_uid)
+
+        resolve_to_package_uid = dependency_data.get("resolve_to_package_uid")
+        if not resolved_to_package and resolve_to_package_uid:
+            resolved_to_package = project_packages_qs.get_or_none(
+                package_uid=resolve_to_package_uid
             )
 
-            project.add_warning(description=message, model=cls, details=dependency_data)
-            return
-
-        if not for_package:
-            for_package_uid = dependency_data.get("for_package_uid")
-            if for_package_uid:
-                for_package = project.discoveredpackages.get(
-                    package_uid=for_package_uid
-                )
-
-        if not resolved_to_package:
-            resolved_to_uid = dependency_data.get("resolved_to_uid")
-            if resolved_to_uid:
-                resolved_to_package = project.discoveredpackages.get(
-                    package_uid=resolved_to_uid
-                )
-
-        if not datafile_resource:
-            datafile_path = dependency_data.get("datafile_path")
-            if datafile_path:
-                if strip_datafile_path_root:
-                    segments = datafile_path.split("/")
-                    datafile_path = "/".join(segments[1:])
-                datafile_resource = project.codebaseresources.get(path=datafile_path)
+        datafile_path = dependency_data.get("datafile_path")
+        if not datafile_resource and datafile_path:
+            if strip_datafile_path_root:
+                segments = datafile_path.split("/")
+                datafile_path = "/".join(segments[1:])
+            datafile_resource = project.codebaseresources.get(path=datafile_path)
 
         if datasource_id:
             dependency_data["datasource_id"] = datasource_id
 
-        # Set purl fields from `purl`
+        # Set package_url fields from the ``purl`` string.
         purl = dependency_data.get("purl")
-        purl_mapping = PackageURL.from_string(purl).to_dict()
-        dependency_data.update(**purl_mapping)
+        if purl:
+            purl_data_dict = PackageURL.from_string(purl).to_dict()
+            dependency_data.update(**purl_data_dict)
 
         cleaned_data = {
             field_name: value
@@ -3875,7 +3899,7 @@ class DiscoveredDependency(
     def spdx_id(self):
         return f"SPDXRef-scancodeio-{self._meta.model_name}-{self.dependency_uid}"
 
-    def as_spdx(self):
+    def as_spdx_package(self):
         """Return this Dependency as an SPDX Package entry."""
         from scanpipe.pipes import spdx
 
