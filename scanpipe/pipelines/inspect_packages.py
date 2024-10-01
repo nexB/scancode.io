@@ -60,7 +60,7 @@ class InspectPackages(ScanCodebase):
         """
         scancode.scan_for_application_packages(
             project=self.project,
-            assemble=True,
+            assemble=False,
             package_only=True,
             progress_logger=self.log,
         )
