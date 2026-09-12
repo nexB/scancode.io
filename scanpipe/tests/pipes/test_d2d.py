@@ -1530,14 +1530,18 @@ class ScanPipeD2DPipesTest(TestCase):
         )
         foo_java.update(status=flag.IGNORED_FROM_CONFIG)
 
+        # Create another file that is already scanned but should not be
+        # reverted
+        other_scanned = make_resource_file(
+            self.project1, "to/other_scanned.txt", status=flag.SCANNED
+        )
+
         d2d.scan_ignored_to_files(self.project1)
         foo_java.refresh_from_db()
+        other_scanned.refresh_from_db()
 
-        expected = self.project1.codebaseresources.filter(
-            status=flag.IGNORED_FROM_CONFIG
-        ).count()
-
-        self.assertEqual(1, expected)
+        self.assertEqual(flag.IGNORED_FROM_CONFIG, foo_java.status)
+        self.assertEqual(flag.SCANNED, other_scanned.status)
 
     def test_scan_unmapped_to_files(self):
         to_dir = (
@@ -1558,14 +1562,18 @@ class ScanPipeD2DPipesTest(TestCase):
         )
         foo_java.update(status=flag.REQUIRES_REVIEW)
 
+        # Create another file that is already scanned but should not be
+        # reverted
+        other_scanned = make_resource_file(
+            self.project1, "to/other_scanned.txt", status=flag.SCANNED
+        )
+
         d2d.scan_unmapped_to_files(self.project1)
         foo_java.refresh_from_db()
+        other_scanned.refresh_from_db()
 
-        expected = self.project1.codebaseresources.filter(
-            status=flag.REQUIRES_REVIEW
-        ).count()
-
-        self.assertEqual(1, expected)
+        self.assertEqual(flag.REQUIRES_REVIEW, foo_java.status)
+        self.assertEqual(flag.SCANNED, other_scanned.status)
 
     def test_flag_deployed_from_resources_with_missing_license(self):
         from_dir = (

@@ -1556,9 +1556,17 @@ def scan_ignored_to_files(project, logger=None):
         .to_codebase()
         .filter(status=flag.IGNORED_FROM_CONFIG)
     )
+
+    # Capture the specific files id
+    scan_file_ids = list(scan_files.values_list("id", flat=True))
+
+    if not scan_file_ids:
+        return
+
     scancode.scan_for_files(project, scan_files, progress_logger=logger)
 
-    project.codebaseresources.files().to_codebase().filter(status=flag.SCANNED).update(
+    # Revert to the original status value
+    project.codebaseresources.filter(id__in=scan_file_ids, status=flag.SCANNED).update(
         status=flag.IGNORED_FROM_CONFIG
     )
 
@@ -1573,9 +1581,17 @@ def scan_unmapped_to_files(project, logger=None):
         .to_codebase()
         .filter(status=flag.REQUIRES_REVIEW)
     )
+
+    # Capture the specific files id
+    scan_file_ids = list(scan_files.values_list("id", flat=True))
+
+    if not scan_file_ids:
+        return
+
     scancode.scan_for_files(project, scan_files, progress_logger=logger)
 
-    project.codebaseresources.files().to_codebase().filter(status=flag.SCANNED).update(
+    # Revert to the original status value
+    project.codebaseresources.filter(id__in=scan_file_ids, status=flag.SCANNED).update(
         status=flag.REQUIRES_REVIEW
     )
 
