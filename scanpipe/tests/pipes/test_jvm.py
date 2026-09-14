@@ -50,6 +50,48 @@ import java.util.concurrent.TimeUnit;
 
 java_package_too_far_down = ("\n" * 501) + "package org.apache.logging.log4j.core;"
 
+# Java code where class name differs from filename (like lombok's DelombokTask.java)
+java_code_different_class_name = """
+package lombok.delombok.ant;
+
+import org.apache.tools.ant.Task;
+
+/**
+ * Ant tasks for delombok.
+ * This file is named DelombokTask.java but contains class Tasks.
+ */
+class Tasks {
+    public static class Delombok extends Task {
+        public void execute() {}
+    }
+
+    public static class Format extends Task {
+        public void execute() {}
+    }
+}
+"""
+
+# Java code with multiple classes including interface and enum
+java_code_multiple_types = """
+package com.example;
+
+public class MainClass {
+    // Main implementation
+}
+
+interface SomeInterface {
+    void doSomething();
+}
+
+enum Status {
+    ACTIVE, INACTIVE
+}
+
+abstract class AbstractBase {
+    public abstract void process();
+}
+"""
+
 
 class ScanPipeJvmTest(TestCase):
     data = Path(__file__).parent.parent / "data"
@@ -113,6 +155,53 @@ class ScanPipeJvmTest(TestCase):
     def test_scanpipe_pipes_jvm_get_fully_qualified_java_path(self):
         fqjp = jvm.get_fully_qualified_path("org.common", "Bar.java")
         self.assertEqual("org/common/Bar.java", fqjp)
+
+    def test_scanpipe_pipes_jvm_find_java_package_with_different_class_name(self):
+        """Test that find_source_package extracts class names differing from filename."""
+        result = jvm.JavaLanguage.find_source_package(
+            java_code_different_class_name.splitlines()
+        )
+        self.assertEqual("lombok.delombok.ant", result["java_package"])
+        # The class name "Tasks" differs from what would be the filename
+        self.assertIn("Tasks", result["java_classes"])
+        # Also check for inner classes
+        self.assertIn("Delombok", result["java_classes"])
+        self.assertIn("Format", result["java_classes"])
+
+    def test_scanpipe_pipes_jvm_find_java_package_with_multiple_types(self):
+        """Test that find_source_package extracts all class/interface/enum names."""
+        result = jvm.JavaLanguage.find_source_package(
+            java_code_multiple_types.splitlines()
+        )
+        self.assertEqual("com.example", result["java_package"])
+        classes = result["java_classes"]
+        self.assertIn("MainClass", classes)
+        self.assertIn("SomeInterface", classes)
+        self.assertIn("Status", classes)
+        self.assertIn("AbstractBase", classes)
+
+    def test_scanpipe_pipes_jvm_get_indexable_qualified_paths_with_class_names(self):
+        """Test get_indexable_qualified_paths_from_values yields class name paths."""
+        resource_values = [
+            (
+                1,
+                "DelombokTask.java",
+                {
+                    "java_package": "lombok.delombok.ant",
+                    "java_classes": ["Tasks", "Delombok"],
+                },
+            ),
+        ]
+        paths = list(
+            jvm.JavaLanguage.get_indexable_qualified_paths_from_values(resource_values)
+        )
+        # Should yield: filename path, and paths for each class name that differs
+        self.assertEqual(3, len(paths))
+        # First is the original filename-based path
+        self.assertEqual((1, "lombok/delombok/ant/DelombokTask.java"), paths[0])
+        # Then paths for class names that differ from filename
+        self.assertEqual((1, "lombok/delombok/ant/Tasks.java"), paths[1])
+        self.assertEqual((1, "lombok/delombok/ant/Delombok.java"), paths[2])
 
 
 class ScanPipeJvmScalaTest(TestCase):

@@ -502,6 +502,34 @@ class ScanPipeD2DPipesTest(TestCase):
         expected = "No ('.java',) resources to map."
         self.assertIn(expected, buffer.getvalue())
 
+    def test_scanpipe_pipes_d2d_map_java_to_class_different_class_name(self):
+        """Test D2D mapping when class name differs from source filename (#1993)."""
+        # Source file named DelombokTask.java but contains class Tasks
+        from1 = make_resource_file(
+            self.project1,
+            path="from/lombok/delombok/ant/DelombokTask.java",
+            extra_data={
+                "java_package": "lombok.delombok.ant",
+                "java_classes": ["Tasks", "Delombok"],
+            },
+        )
+        # The .class file is named after the class, not the source file
+        to1 = make_resource_file(
+            self.project1,
+            path="to/lombok/delombok/ant/Tasks.class",
+        )
+
+        buffer = io.StringIO()
+        d2d.map_jvm_to_class(
+            self.project1, logger=buffer.write, jvm_lang=jvm.JavaLanguage
+        )
+
+        # Should find the mapping via class name
+        relation = self.project1.codebaserelations.get()
+        self.assertEqual(from1, relation.from_resource)
+        self.assertEqual(to1, relation.to_resource)
+        self.assertEqual("java_to_class", relation.map_type)
+
     def test_scanpipe_pipes_d2d_java_ignore_pattern(self):
         make_resource_file(self.project1, path="to/module-info.class")
         make_resource_file(self.project1, path="to/META-INF/MANIFEST.MF")

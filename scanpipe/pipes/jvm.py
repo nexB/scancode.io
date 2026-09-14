@@ -41,6 +41,8 @@ class JvmLanguage:
     binary_extensions: tuple = (".class",)
     # Like java_package, kotlin_package, scala_package, used as an attribute in resource
     source_package_attribute_name: str = None
+    # Like java_classes, stores the class names defined in the source file
+    source_classes_attribute_name: str = None
     # A regex pattern to extract a package from a source file
     package_regex: Pattern = None
     # Type of relation for a binary file to its source file
@@ -115,13 +117,37 @@ class JvmLanguage:
 
         And the output tuples look like this example::
             (123, "org/apache/commons/LoggerImpl.java")
+
+        If the source file contains class names that differ from the filename
+        (e.g., a file named "Foo.java" containing "class Bar"), additional
+        entries are yielded for each class name.
         """
         for resource_id, resource_name, resource_extra_data in resource_values:
+            jvm_package = resource_extra_data.get(cls.source_package_attribute_name)
+            # Yield the original filename-based path
             fully_qualified = get_fully_qualified_path(
-                jvm_package=resource_extra_data.get(cls.source_package_attribute_name),
+                jvm_package=jvm_package,
                 filename=resource_name,
             )
             yield resource_id, fully_qualified
+
+            # Also yield paths for any class names that differ from the filename
+            if cls.source_classes_attribute_name:
+                class_names = resource_extra_data.get(
+                    cls.source_classes_attribute_name, []
+                )
+                # Get the base name without extension to compare
+                base_name = Path(resource_name).stem
+                extension = Path(resource_name).suffix
+                for class_name in class_names:
+                    # Only yield if class name differs from filename
+                    if class_name != base_name:
+                        class_filename = f"{class_name}{extension}"
+                        class_path = get_fully_qualified_path(
+                            jvm_package=jvm_package,
+                            filename=class_filename,
+                        )
+                        yield resource_id, class_path
 
     @classmethod
     def get_normalized_path(cls, path, extension):
@@ -180,13 +206,54 @@ def find_expression(lines, regex):
                 return value
 
 
+def find_all_expressions(lines, regex, max_lines=500):
+    """Return all values found using ``regex`` in the first ``max_lines`` lines."""
+    results = []
+    for ln, line in enumerate(lines):
+        if ln > max_lines:
+            break
+        for value in regex.findall(line):
+            if value and value not in results:
+                results.append(value)
+    return results
+
+
 class JavaLanguage(JvmLanguage):
     name = "java"
     source_extensions = (".java",)
     binary_extensions = (".class",)
     source_package_attribute_name = "java_package"
+    source_classes_attribute_name = "java_classes"
     package_regex = re.compile(r"^\s*package\s+([\w\.]+)\s*;")
+    # Regex to match class/interface/enum declarations in Java
+    # Matches patterns like: "class Foo", "public class Foo", "interface Bar", etc.
+    class_name_regex = re.compile(
+        r"(?:^|[;\s{}])\s*"  # Start of line or after ; { } or whitespace
+        r"(?:public\s+|private\s+|protected\s+|abstract\s+|final\s+|static\s+)*"
+        r"(?:class|interface|enum)\s+"
+        r"(\w+)"  # Capture the class/interface/enum name
+    )
     binary_map_type = "java_to_class"
+
+    @classmethod
+    def find_source_package(cls, lines):
+        """Find the package and class names from Java source lines."""
+        result = {}
+        lines_list = list(lines)
+
+        # Find package
+        package = find_expression(lines=iter(lines_list), regex=cls.package_regex)
+        if package:
+            result[cls.source_package_attribute_name] = package
+
+        # Find all class/interface/enum names
+        class_names = find_all_expressions(
+            lines=iter(lines_list), regex=cls.class_name_regex
+        )
+        if class_names:
+            result[cls.source_classes_attribute_name] = class_names
+
+        return result if result else None
 
 
 class ScalaLanguage(JvmLanguage):
