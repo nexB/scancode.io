@@ -236,6 +236,35 @@ class ScanPipePipesTest(TestCase):
         dependency = pipes.update_or_create_dependency(p1, dependency_data)
         self.assertIsNone(dependency)
 
+    def test_scanpipe_pipes_ignore_dependency_scope_package_type_from_purl(self):
+        # https://github.com/aboutcode-org/scancode.io/issues/2215
+        # Dependency data from a scancode-toolkit scan has no "package_type"
+        # entry: the type must be derived from the purl.
+        p1 = Project.objects.create(name="Analysis")
+        p1.settings = {
+            "ignored_dependency_scopes": [
+                {"package_type": "npm", "scope": "devDependencies"}
+            ]
+        }
+        p1.save()
+
+        dependency_data = {
+            "purl": "pkg:npm/mocha@10.2.0",
+            "scope": "devDependencies",
+        }
+        self.assertTrue(pipes.ignore_dependency_scope(p1, dependency_data))
+
+        dependency_data["scope"] = "dependencies"
+        self.assertFalse(pipes.ignore_dependency_scope(p1, dependency_data))
+
+        dependency_data = {"purl": "pkg:pypi/mocha@10.2.0", "scope": "devDependencies"}
+        self.assertFalse(pipes.ignore_dependency_scope(p1, dependency_data))
+
+        # no purl and no package_type: never ignored
+        self.assertFalse(
+            pipes.ignore_dependency_scope(p1, {"scope": "devDependencies"})
+        )
+
     def test_scanpipe_pipes_get_or_create_relation(self):
         p1 = Project.objects.create(name="Analysis")
         from1 = make_resource_file(p1, "from/a.txt")
