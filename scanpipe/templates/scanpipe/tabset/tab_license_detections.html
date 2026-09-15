@@ -1,10 +1,58 @@
 <div class="content">
+    {% if file_match_groups %}
+    <h2 class="is-size-5 mb-3">Matches by file</h2>
+    {% for file_group in file_match_groups %}
+    <article class="box p-3 mb-4">
+      <div class="is-flex is-justify-content-space-between is-align-items-flex-start is-flex-wrap-wrap mb-3">
+        <div class="break-all mr-3">
+          {% if file_group.file_region.path %}
+            <a href="{% url 'resource_detail' project.slug file_group.file_region.path %}#detection">{{ file_group.file_region.path }}</a>
+          {% else %}
+            <span class="has-text-grey">No origin resource path</span>
+          {% endif %}
+        </div>
+        {% if file_group.file_region.start_line or file_group.file_region.end_line %}
+          <div class="tags">
+            <span class="tag">Lines {{ file_group.file_region.start_line }}-{{ file_group.file_region.end_line }}</span>
+          </div>
+        {% endif %}
+      </div>
+      {% if file_group.matches %}
+        {% for match in file_group.matches %}
+          <div class="license-match-block{% if not forloop.last %} mb-4{% endif %}">
+            <div class="tags mb-2">
+              <span class="tag is-dark">{{ match.license_expression }}</span>
+              {% if match.matcher %}<span class="tag">Matcher {{ match.matcher }}</span>{% endif %}
+              {% if match.score %}<span class="tag">Score {{ match.score }}</span>{% endif %}
+              {% if match.match_coverage %}<span class="tag">Coverage {{ match.match_coverage }}</span>{% endif %}
+              {% if match.rule_identifier %}
+                <span class="tag">
+                  {% if match.rule_url %}
+                    <a href="{{ match.rule_url }}">{{ match.rule_identifier }} <i class="fa-solid fa-up-right-from-square is-small"></i></a>
+                  {% else %}
+                    {{ match.rule_identifier }}
+                  {% endif %}
+                </span>
+              {% endif %}
+            </div>
+            {% include "scanpipe/includes/license_match_comparison.html" with match=match only %}
+          </div>
+        {% endfor %}
+      {% else %}
+        <p class="has-text-grey">No match text is available for this file region.</p>
+      {% endif %}
+    </article>
+    {% endfor %}
+    {% endif %}
+
     <table class="table is-bordered is-striped is-narrow is-hoverable is-fullwidth is-rounded-table">
         <thead>
           <tr>
             <th>License expression</th>
             <th>Origin resource path</th>
             <th>Matched text</th>
+            <th>Diagnostic matched text</th>
+            <th>Rule text</th>
             <th>Rule URL</th>
             <th>Score</th>
             <th>Matcher</th>
@@ -24,6 +72,12 @@
             </td>
             <td class="break-all">
               {{ match.matched_text }}
+            </td>
+            <td class="break-all">
+              {{ match.matched_text_diagnostics }}
+            </td>
+            <td class="break-all">
+              {{ match.rule_text }}
             </td>
             <td class="break-all">
               {% if match.rule_url %}

@@ -2535,6 +2535,57 @@ class DiscoveredLicenseDetailsView(
         },
     }
 
+    @staticmethod
+    def get_matches_by_file(matches):
+        matches_by_file = {}
+        for match in matches:
+            from_file = match.get("from_file") or ""
+            matches_by_file.setdefault(from_file, []).append(match)
+
+        return matches_by_file
+
+    def get_file_match_groups(self):
+        matches_by_file = self.get_matches_by_file(self.object.matches)
+        file_match_groups = []
+
+        null_from_file_matches = matches_by_file.pop("", [])
+
+        for file_region in self.object.file_regions:
+            path = file_region.get("path") or ""
+            matches = matches_by_file.pop(path, [])
+            if not matches and null_from_file_matches:
+                matches = null_from_file_matches
+
+            file_match_groups.append(
+                {
+                    "file_region": file_region,
+                    "matches": matches,
+                }
+            )
+
+        for path, matches in matches_by_file.items():
+            file_match_groups.append(
+                {
+                    "file_region": {"path": path},
+                    "matches": matches,
+                }
+            )
+
+        if not file_match_groups and null_from_file_matches:
+            file_match_groups.append(
+                {
+                    "file_region": {},
+                    "matches": null_from_file_matches,
+                }
+            )
+
+        return file_match_groups
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["file_match_groups"] = self.get_file_match_groups()
+        return context
+
 
 @conditional_login_required
 def run_detail_view(request, uuid):

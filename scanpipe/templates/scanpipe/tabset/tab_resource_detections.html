@@ -1,6 +1,6 @@
 <div class="content">
     {% if tab_data.fields.license_detections.value %}
-    <table class="table is-bordered is-striped is-narrow is-hoverable is-fullwidth is-rounded-table">
+    <table class="table is-bordered is-striped is-narrow is-hoverable is-fullwidth is-rounded-table mb-4">
         <thead>
           <tr>
             <th>License detections</th>
@@ -24,6 +24,45 @@
           {% endfor %}
         </tbody>
     </table>
+
+    {% for detection in tab_data.fields.license_detections.value %}
+      <article class="box p-3 mb-4">
+        <div class="is-flex is-justify-content-space-between is-align-items-flex-start is-flex-wrap-wrap mb-3">
+          <div class="break-all mr-3">
+            <a href="{% url 'license_detail' project.slug detection.identifier %}">{{ detection.identifier }}</a>
+          </div>
+          <div class="tags">
+            <span class="tag is-dark">{{ detection.license_expression }}</span>
+            {% if detection.license_expression_spdx %}
+              <span class="tag">{{ detection.license_expression_spdx }}</span>
+            {% endif %}
+          </div>
+        </div>
+        {% for match in detection.matches %}
+          <div class="license-match-block{% if not forloop.last %} mb-4{% endif %}">
+            <div class="tags mb-2">
+              <span class="tag is-dark">{{ match.license_expression }}</span>
+              {% if match.start_line or match.end_line %}<span class="tag">Lines {{ match.start_line }}-{{ match.end_line }}</span>{% endif %}
+              {% if match.matcher %}<span class="tag">Matcher {{ match.matcher }}</span>{% endif %}
+              {% if match.score %}<span class="tag">Score {{ match.score }}</span>{% endif %}
+              {% if match.match_coverage %}<span class="tag">Coverage {{ match.match_coverage }}</span>{% endif %}
+              {% if match.rule_identifier %}
+                <span class="tag">
+                  {% if match.rule_url %}
+                    <a href="{{ match.rule_url }}">{{ match.rule_identifier }} <i class="fa-solid fa-up-right-from-square is-small"></i></a>
+                  {% else %}
+                    {{ match.rule_identifier }}
+                  {% endif %}
+                </span>
+              {% endif %}
+            </div>
+            {% include "scanpipe/includes/license_match_comparison.html" with match=match only %}
+          </div>
+        {% empty %}
+          <p class="has-text-grey">No match text is available for this detection.</p>
+        {% endfor %}
+      </article>
+    {% endfor %}
     {% endif %}
     {% if tab_data.fields.license_clues.value %}
     <table class="table is-bordered is-striped is-narrow is-hoverable is-fullwidth is-rounded-table">

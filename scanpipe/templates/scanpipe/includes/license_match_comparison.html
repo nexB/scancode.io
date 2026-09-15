@@ -1,0 +1,16 @@
+<div class="license-match-comparison">
+  <div class="columns is-variable is-2 is-multiline mb-0">
+    <div class="column is-half">
+      <p class="has-text-weight-semibold mb-1">Matched text</p>
+      <pre class="wrap is-small license-match-text">{{ match.matched_text|default:"" }}</pre>
+    </div>
+    <div class="column is-half">
+      <p class="has-text-weight-semibold mb-1">Rule text</p>
+      <pre class="wrap is-small license-match-text">{{ match.rule_text|default:"" }}</pre>
+    </div>
+  </div>
+  {% if match.matched_text_diagnostics %}
+    <p class="has-text-weight-semibold mb-1">Diagnostic matched text</p>
+    <pre class="wrap is-small license-match-text">{{ match.matched_text_diagnostics }}</pre>
+  {% endif %}
+</div>

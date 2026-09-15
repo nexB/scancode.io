@@ -42,6 +42,7 @@ from scanpipe.forms import BaseProjectActionForm
 from scanpipe.models import CodebaseRelation
 from scanpipe.models import CodebaseResource
 from scanpipe.models import DiscoveredDependency
+from scanpipe.models import DiscoveredLicense
 from scanpipe.models import DiscoveredPackage
 from scanpipe.models import Project
 from scanpipe.pipes import make_relation
@@ -1396,6 +1397,213 @@ class ScanPipeViewsTest(TestCase):
         xss_url = reverse("license_detail", args=[xss])
         response = self.client.get(xss_url)
         self.assertEqual(response.status_code, 404)
+
+    def test_scanpipe_views_license_detection_details_view_match_texts(self):
+        matches = [
+            {
+                "score": 100.0,
+                "start_line": 1,
+                "end_line": 1,
+                "matched_length": 4,
+                "match_coverage": 100.0,
+                "matcher": "1-hash",
+                "license_expression": "mit",
+                "rule_identifier": "mit_1.RULE",
+                "rule_text": "license: MIT",
+                "matched_text": "License: MIT",
+                "matched_text_diagnostics": "License MIT",
+                "from_file": "LICENSE",
+            }
+        ]
+        license_detection = DiscoveredLicense.objects.create(
+            project=self.project1,
+            license_expression="mit",
+            license_expression_spdx="MIT",
+            identifier="mit-123",
+            matches=matches,
+            file_regions=[{"path": "LICENSE", "start_line": 1, "end_line": 1}],
+        )
+
+        url = reverse(
+            "license_detail",
+            args=[self.project1.slug, license_detection.identifier],
+        )
+        response = self.client.get(url)
+
+        self.assertContains(response, "Diagnostic matched text")
+        self.assertContains(response, "License MIT")
+        self.assertContains(response, "Matched text")
+        self.assertContains(response, "License: MIT")
+        self.assertContains(response, "Rule text")
+        self.assertContains(response, "license: MIT")
+
+    def test_scanpipe_views_license_detection_details_view_match_texts_null_from_file(self):
+        matches = [
+            {
+                "score": 100.0,
+                "start_line": 1,
+                "end_line": 1,
+                "matched_length": 3,
+                "match_coverage": 100.0,
+                "matcher": "1-spdx-id",
+                "license_expression": "isc",
+                "rule_identifier": "isc_9931cb7ad33c2eb18f322c94660b670a84186baa.RULE",
+                "matched_text": "ISC",
+                "from_file": None,
+            }
+        ]
+        license_detection = DiscoveredLicense.objects.create(
+            project=self.project1,
+            license_expression="isc",
+            license_expression_spdx="ISC",
+            identifier="isc-null-from-file",
+            matches=matches,
+            detection_count=2,
+            file_regions=[
+                {"path": "a/package.json", "start_line": 1, "end_line": 1},
+                {"path": "b/package-lock.json", "start_line": 1, "end_line": 1},
+            ],
+        )
+
+        url = reverse(
+            "license_detail",
+            args=[self.project1.slug, license_detection.identifier],
+        )
+        response = self.client.get(url)
+
+        self.assertContains(response, "Matches by file")
+        self.assertContains(response, "a/package.json")
+        self.assertContains(response, "b/package-lock.json")
+        self.assertContains(response, "ISC")
+        self.assertNotContains(response, "No match text is available for this file region.")
+        self.assertNotContains(response, "No origin resource path")
+
+    def test_scanpipe_views_license_detection_details_view_match_texts_mixed_from_file(self):
+        matches = [
+            {
+                "score": 100.0,
+                "start_line": 1,
+                "end_line": 1,
+                "matched_length": 4,
+                "match_coverage": 100.0,
+                "matcher": "1-hash",
+                "license_expression": "mit",
+                "rule_identifier": "mit_1.RULE",
+                "matched_text": "License: MIT",
+                "from_file": "LICENSE",
+            },
+            {
+                "score": 100.0,
+                "start_line": 5,
+                "end_line": 5,
+                "matched_length": 3,
+                "match_coverage": 100.0,
+                "matcher": "1-spdx-id",
+                "license_expression": "apache-2.0",
+                "rule_identifier": "apache2_99.RULE",
+                "matched_text": "Apache-2.0",
+                "from_file": None,
+            },
+        ]
+        license_detection = DiscoveredLicense.objects.create(
+            project=self.project1,
+            license_expression="mit AND apache-2.0",
+            license_expression_spdx="MIT AND Apache-2.0",
+            identifier="mixed-from-file",
+            matches=matches,
+            detection_count=3,
+            file_regions=[
+                {"path": "LICENSE", "start_line": 1, "end_line": 1},
+                {"path": "setup.py", "start_line": 5, "end_line": 5},
+            ],
+        )
+
+        url = reverse(
+            "license_detail",
+            args=[self.project1.slug, license_detection.identifier],
+        )
+        response = self.client.get(url)
+
+        self.assertContains(response, "Matches by file")
+        self.assertContains(response, "LICENSE")
+        self.assertContains(response, "setup.py")
+        self.assertContains(response, "License: MIT")
+        self.assertContains(response, "Apache-2.0")
+        self.assertNotContains(response, "No match text is available for this file region.")
+
+    def test_scanpipe_views_license_detection_details_view_match_texts_no_file_regions(self):
+        matches = [
+            {
+                "score": 100.0,
+                "start_line": 1,
+                "end_line": 1,
+                "matched_length": 3,
+                "match_coverage": 100.0,
+                "matcher": "1-spdx-id",
+                "license_expression": "isc",
+                "rule_identifier": "isc_99.RULE",
+                "matched_text": "ISC",
+                "from_file": None,
+            }
+        ]
+        license_detection = DiscoveredLicense.objects.create(
+            project=self.project1,
+            license_expression="isc",
+            license_expression_spdx="ISC",
+            identifier="isc-no-regions",
+            matches=matches,
+            file_regions=[],
+        )
+
+        url = reverse(
+            "license_detail",
+            args=[self.project1.slug, license_detection.identifier],
+        )
+        response = self.client.get(url)
+
+        self.assertContains(response, "Matches by file")
+        self.assertContains(response, "ISC")
+        self.assertContains(response, "No origin resource path")
+        self.assertNotContains(response, "No match text is available for this file region.")
+
+    def test_scanpipe_views_resource_details_view_inlines_detection_match_texts(self):
+        license_detections = [
+            {
+                "identifier": "mit-123",
+                "license_expression": "mit",
+                "license_expression_spdx": "MIT",
+                "matches": [
+                    {
+                        "score": 100.0,
+                        "start_line": 1,
+                        "end_line": 1,
+                        "matched_length": 4,
+                        "match_coverage": 100.0,
+                        "matcher": "1-hash",
+                        "license_expression": "mit",
+                        "rule_identifier": "mit_1.RULE",
+                        "rule_text": "license: MIT",
+                        "matched_text": "License: MIT",
+                        "matched_text_diagnostics": "License MIT",
+                    }
+                ],
+            }
+        ]
+        resource = make_resource_file(
+            self.project1,
+            "LICENSE",
+            detected_license_expression="mit",
+            license_detections=license_detections,
+        )
+
+        response = self.client.get(resource.get_absolute_url())
+
+        self.assertContains(response, "Diagnostic matched text")
+        self.assertContains(response, "License MIT")
+        self.assertContains(response, "Matched text")
+        self.assertContains(response, "License: MIT")
+        self.assertContains(response, "Rule text")
+        self.assertContains(response, "license: MIT")
 
     @mock.patch("scanpipe.models.DiscoveredPackage.get_absolute_url")
     def test_scanpipe_views_project_dependency_tree(self, mock_get_url):

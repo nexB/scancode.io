@@ -196,6 +196,21 @@ pre.wrap {
 pre.is-small {
   padding: 0.75rem 1rem;
 }
+.license-match-text {
+  max-height: 24rem;
+  overflow: auto;
+}
+.license-match-comparison pre {
+  margin-bottom: 0.75rem;
+}
+.license-match-block {
+  border-top: 1px solid var(--bulma-border-weak);
+  padding-top: 0.75rem;
+}
+.license-match-block:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
 .nexb-orange {
   color: rgb(var(--nexb-orange));
 }
