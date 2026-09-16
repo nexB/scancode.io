@@ -1903,6 +1903,159 @@ class ScanPipeD2DPipesTest(TestCase):
             ).count(),
         )
 
+    def test_scanpipe_pipes_d2d_is_go_binary(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            work_dir = Path(tmp_dir)
+
+            non_go_file = work_dir / "non_go.bin"
+            non_go_file.write_bytes(b"just some random C++ binary data...")
+            self.assertFalse(d2d.is_go_binary(non_go_file))
+
+            go_file_magic = work_dir / "go_magic.bin"
+            go_file_magic.write_bytes(b"some bytes... \xff Go buildinf: ...tail")
+            self.assertTrue(d2d.is_go_binary(go_file_magic))
+
+            # Valid Go files matching the PCLNTAB magic header matrix
+            # Covers all Go 1.2+ magic bytes, plus all supported minLC and
+            # ptrSize values
+            for i, magic in enumerate(d2d.GO_PCLNTAB_MAGIC):
+                for min_lc in (1, 2, 4):
+                    for ptr_size in (4, 8):
+                        header = magic + b"\x00\x00" + bytes([min_lc, ptr_size])
+                        path = work_dir / f"pclntab_{i}_{min_lc}_{ptr_size}.bin"
+                        path.write_bytes(b"prefix data" + header + b"suffix data")
+                        self.assertTrue(d2d.is_go_binary(path))
+
+            # Invalid PCLNTAB header (Magic matches, but padding is wrong)
+            go_file_invalid_pclntab = work_dir / "go_pclntab_invalid.bin"
+            # \x01\x00 instead of \x00\x00
+            invalid_header = b"\xf1\xff"
+            go_file_invalid_pclntab.write_bytes(
+                b"prefix data" + invalid_header + b"suffix data"
+            )
+            self.assertFalse(d2d.is_go_binary(go_file_invalid_pclntab))
+
+    def test_scanpipe_pipes_d2d_is_upx_packed(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            work_dir = Path(tmp_dir)
+
+            unpacked = work_dir / "unpacked.bin"
+            unpacked.write_bytes(b"plain ELF header, no packer signature")
+            self.assertFalse(d2d.is_upx_packed(unpacked))
+
+            packed = work_dir / "packed.bin"
+            packed.write_bytes(b"mz header... UPX! ...compressed payload")
+            self.assertTrue(d2d.is_upx_packed(packed))
+
+    @mock.patch("scanpipe.pipes.d2d.map_paths_resource")
+    @mock.patch("scanpipe.pipes.d2d.get_go_file_paths")
+    @mock.patch("scanpipe.pipes.d2d.is_go_binary")
+    @mock.patch("scanpipe.pipes.d2d.is_upx_packed")
+    def test_scanpipe_pipes_d2d_map_go_paths_processes_go_binaries(
+        self, mock_is_upx, mock_is_go, mock_get_paths, mock_map
+    ):
+        mock_is_upx.return_value = False
+        mock_is_go.return_value = True
+        mock_get_paths.return_value = {"go_file_paths": ["a.go"]}
+
+        to_dir = self.project1.codebase_path / "to"
+        to_dir.mkdir(parents=True)
+        copy_input(
+            self.data / "d2d" / "find_java_packages" / "Baz.class",
+            to_dir,
+        )
+        pipes.collect_and_create_codebase_resources(self.project1)
+
+        buffer = io.StringIO()
+        d2d.map_go_paths(project=self.project1, logger=buffer.write)
+
+        mock_get_paths.assert_called_once()
+
+        resource = self.project1.codebaseresources.get(path="to/Baz.class")
+        self.assertEqual({"go_file_paths": ["a.go"]}, resource.extra_data)
+
+        mock_map.assert_called_once()
+        called_resource = mock_map.call_args[0][0]
+        self.assertEqual(resource, called_resource)
+
+    @mock.patch("scanpipe.pipes.d2d.map_paths_resource")
+    @mock.patch("scanpipe.pipes.d2d.get_go_file_paths")
+    @mock.patch("scanpipe.pipes.d2d.is_go_binary")
+    @mock.patch("scanpipe.pipes.d2d.is_upx_packed")
+    def test_scanpipe_pipes_d2d_map_go_paths_handles_parse_failure(
+        self, mock_is_upx, mock_is_go, mock_get_paths, mock_map
+    ):
+        mock_is_upx.return_value = False
+        mock_is_go.return_value = True
+        mock_get_paths.side_effect = RuntimeError("error")
+
+        to_dir = self.project1.codebase_path / "to"
+        to_dir.mkdir(parents=True)
+        copy_input(
+            self.data / "d2d" / "find_java_packages" / "Baz.class",
+            to_dir,
+        )
+        pipes.collect_and_create_codebase_resources(self.project1)
+
+        buffer = io.StringIO()
+        d2d.map_go_paths(project=self.project1, logger=buffer.write)
+
+        self.assertEqual(1, self.project1.projectmessages.count())
+        warning = self.project1.projectmessages.first()
+        self.assertIn("Cannot parse binary", warning.description)
+        mock_map.assert_not_called()
+
+    @mock.patch("scanpipe.pipes.d2d.get_go_file_paths")
+    @mock.patch("scanpipe.pipes.d2d.is_go_binary")
+    @mock.patch("scanpipe.pipes.d2d.is_upx_packed")
+    def test_scanpipe_pipes_d2d_map_go_paths_skips_non_go_binaries(
+        self, mock_is_upx, mock_is_go, mock_get_go_paths
+    ):
+        mock_is_upx.return_value = False
+        mock_is_go.return_value = False
+
+        to_dir = self.project1.codebase_path / "to"
+        to_dir.mkdir(parents=True)
+        copy_input(
+            self.data / "d2d" / "find_java_packages" / "Baz.class",
+            to_dir,
+        )
+        pipes.collect_and_create_codebase_resources(self.project1)
+
+        buffer = io.StringIO()
+        d2d.map_go_paths(project=self.project1, logger=buffer.write)
+
+        mock_is_upx.assert_called()
+        mock_is_go.assert_called()
+        mock_get_go_paths.assert_not_called()
+
+    @mock.patch("scanpipe.pipes.d2d.get_go_file_paths")
+    @mock.patch("scanpipe.pipes.d2d.is_go_binary")
+    @mock.patch("scanpipe.pipes.d2d.is_upx_packed")
+    def test_scanpipe_pipes_d2d_map_go_paths_flags_upx_packed(
+        self, mock_is_upx, mock_is_go, mock_get_go_paths
+    ):
+        mock_is_upx.return_value = True
+
+        to_dir = self.project1.codebase_path / "to"
+        to_dir.mkdir(parents=True)
+        copy_input(
+            self.data / "d2d" / "find_java_packages" / "Baz.class",
+            to_dir,
+        )
+        pipes.collect_and_create_codebase_resources(self.project1)
+
+        buffer = io.StringIO()
+        d2d.map_go_paths(project=self.project1, logger=buffer.write)
+
+        mock_is_upx.assert_called()
+        mock_is_go.assert_not_called()
+        mock_get_go_paths.assert_not_called()
+
+        resource = self.project1.codebaseresources.get(path="to/Baz.class")
+        self.assertEqual(flag.REQUIRES_REVIEW, resource.status)
+        self.assertEqual("upx-packed", resource.extra_data.get("go_analysis_skip"))
+
     @skipIf(sys.platform == "darwin", "Test is failing on macOS")
     def test_scanpipe_pipes_d2d_map_go_paths(self):
         input_dir = self.project1.input_path

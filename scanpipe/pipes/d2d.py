@@ -20,6 +20,7 @@
 # ScanCode.io is a free software code scanning tool from nexB Inc. and others.
 # Visit https://github.com/aboutcode-org/scancode.io for support and download.
 
+import mmap
 import re
 from collections import Counter
 from collections import defaultdict
@@ -1767,20 +1768,25 @@ def map_paths_resource(
                     relations_to_create[rel_key] = relation
         if paths_not_mapped:
             to_resource.status = flag.REQUIRES_REVIEW
-            logger(
-                f"WARNING: #{len(paths_not_mapped)} {map_type} paths NOT mapped for: "
-                f"{to_resource.path!r}"
-            )
+            if logger:
+                logger(
+                    f"WARNING: #{len(paths_not_mapped)} {map_type} paths "
+                    f"NOT mapped for: {to_resource.path!r}"
+                )
         to_resource.save()
 
     if relations_to_create:
         rels = CodebaseRelation.objects.bulk_create(relations_to_create.values())
-        logger(
-            f"Created {len(rels)} mappings using "
-            f"{', '.join(map_types)} for: {to_resource.path!r}"
-        )
+        if logger:
+            logger(
+                f"Created {len(rels)} mappings using "
+                f"{', '.join(map_types)} for: {to_resource.path!r}"
+            )
     else:
-        logger(f"No mappings using {', '.join(map_types)} for: {to_resource.path!r}")
+        if logger:
+            logger(
+                f"No mappings using {', '.join(map_types)} for: {to_resource.path!r}"
+            )
 
 
 def process_paths_in_binary(
@@ -1976,8 +1982,133 @@ def get_elf_file_dwarf_paths(location):
     return dwarf_paths
 
 
+# Byte sequences that identify Go compiled binaries.
+# Reference:
+# https://github.com/golang/go/blob/master/src/debug/buildinfo/buildinfo.go#L58
+# Notes: This marker only exists in Go 1.18 and later. Older Go binaries
+# don't have it
+GO_MARKERS = (b"\xff Go buildinf:",)
+
+# The PCLNTAB (Program Counter Line Table) is a core data structure in every
+# Go binary that maps machine code addresses back to their original source
+# file and line number.
+# PCLNTAB header magic, in native (little-endian) byte order. These survive
+# section-header stripping because the pclntab bytes remain in the data
+# segment even when the section entry is removed.
+# Reference:
+# https://github.com/open-telemetry/opentelemetry-ebpf-profiler/blob/main/doc/gopclntab.md#header
+GO_PCLNTAB_MAGIC = (
+    b"\xfb\xff\xff\xff",  # Go 1.2  - 1.15 (0xfffffffb)
+    b"\xfa\xff\xff\xff",  # Go 1.16 - 1.17 (0xfffffffa)
+    b"\xf0\xff\xff\xff",  # Go 1.18 - 1.19 (0xfffffff0)
+    b"\xf1\xff\xff\xff",  # Go 1.20+       (0xfffffff1)
+)
+
+UPX_MAGIC = b"UPX!"
+
+
+def is_upx_packed(path):
+    """Return True if `path` is a UPX-packed binary."""
+    try:
+        with open(path, "rb") as f:
+            # Map the file so we can scan it without loading it all into
+            # memory.
+            with mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ) as mm:
+                return mm.find(UPX_MAGIC) != -1
+    except (ValueError, OSError):
+        return False
+
+
+def _has_valid_pclntab(mapped, magic):
+    """
+    Check whether the memory-mapped file `mapped` contains a PCLNTAB
+    header starting with `magic`.
+
+    PCLNTAB (Program Counter Line Table) is a data structure present in
+    every Go binary. Its header always begins with an 8-byte sequence
+    that can be used to identify Go binaries.
+
+    The header is the first 8 bytes:
+
+        header[0:4]  = magic   (version tag, see GO_PCLNTAB_MAGIC)
+        header[4:6]  = pad1, pad2 (always zero)
+        header[6]    = minLC   (minimum instruction size)
+        header[7]    = ptrSize (pointer size in bytes)
+
+    minLC depends on the target CPU:
+        1 = x86, x86-64, Wasm
+        2 = riscv64 with compressed instructions
+        4 = ARM, ARM64, MIPS, PowerPC, LoongArch, and most others
+
+    ptrSize is the size of a pointer in bytes on the target CPU:
+        4 = any 32-bit architecture
+        8 = any 64-bit architecture
+
+    The magic alone can match by coincidence, so we also check the three
+    trailing fields. The runtime verifies all three at startup and
+    refuses to run if any is wrong, so their presence alongside the
+    magic is strong evidence of a real Go binary.
+
+    References:
+      https://go.dev/src/runtime/symtab.go
+        (pcHeader struct definition, moduledataverify1 validation)
+      https://go.dev/src/internal/abi/symtab.go
+        (PCLnTabMagic constants: 0xfffffffb/fa/f0/f1)
+      https://cs.opensource.google/go/go/+/refs/tags/go1.23.12:src/runtime/internal/sys/consts.go
+        (PCQuantum: source of the minLC values 1, 4)
+      https://go.dev/src/internal/goarch/goarch_riscv64.go
+        (PCQuantum: source of the minLC value 2)
+      https://go.dev/src/internal/goarch/goarch.go
+        (PtrSize: source of the ptrSize values 4, 8)
+      https://github.com/open-telemetry/opentelemetry-ebpf-profiler/blob/main/doc/gopclntab.md
+        (header format specification)
+
+    """
+    offset = mapped.find(magic)
+    while offset != -1:
+        # Grab the full 8-byte header.
+        header = mapped[offset : offset + 8]
+        if len(header) == 8:
+            zero_bytes = header[4:6]
+            instruction_size = header[6]
+            pointer_size = header[7]
+            # All three trailing fields must match their expected values,
+            # otherwise this is likely a coincidental magic match rather
+            # than a real PCLNTAB header.
+            if (
+                zero_bytes == b"\x00\x00"
+                and instruction_size in (1, 2, 4)
+                and pointer_size in (4, 8)
+            ):
+                return True
+        offset = mapped.find(magic, offset + 1)
+    return False
+
+
+def is_go_binary(path):
+    """
+    Return True if `path` looks like a Go compiled binary.
+
+    Checks for build-info magic and PCLNTAB header magic to identify
+    Go binaries, including those with stripped section headers.
+
+    Returns False for empty files, non-regular paths, and files with no
+    Go marker.
+    """
+    try:
+        with open(path, "rb") as f:
+            # Use memory mapping to allow zero-copy scanning of large
+            # binaries without RAM bloat.
+            with mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ) as mm:
+                if any(mm.find(marker) != -1 for marker in GO_MARKERS):
+                    return True
+                return any(_has_valid_pclntab(mm, magic) for magic in GO_PCLNTAB_MAGIC)
+    except (ValueError, OSError):
+        return False
+
+
 def get_go_file_paths(location):
-    """Retrieve Go file paths."""
+    """Retrieve Go file paths dictionary from the binary at `location`."""
     go_symbols = (
         collect_and_parse_symbols(location, check_type=False).get("go_symbols") or {}
     )
@@ -1997,10 +2128,22 @@ def map_go_paths(project, logger=None):
         .has_no_relation()
         .executable_binaries()
     )
+
+    go_resources = []
+
     for resource in to_resources:
+        # The UPX-packed binaries hide or transform the Go markers, so we
+        # cannot reliably extract paths from them.
+        if is_upx_packed(resource.location_path):
+            resource.update(status=flag.REQUIRES_REVIEW)
+            resource.update_extra_data({"go_analysis_skip": "upx-packed"})
+            continue
+
+        if not is_go_binary(resource.location_path):
+            continue
+
         try:
             paths = get_go_file_paths(resource.location_path)
-            resource.update_extra_data(paths)
         except Exception as exception:
             project.add_warning(
                 exception=exception,
@@ -2009,10 +2152,15 @@ def map_go_paths(project, logger=None):
                 model="map_go_paths",
                 details={"path": resource.path},
             )
+            continue
+
+        if paths:
+            resource.update_extra_data(paths)
+            go_resources.append(resource)
 
     if logger:
         logger(
-            f"Mapping {to_resources.count():,d} to/ resources using paths "
+            f"Mapping {len(go_resources):,d} Go binaries using paths "
             f"with {from_resources.count():,d} from/ resources."
         )
 
@@ -2023,9 +2171,8 @@ def map_go_paths(project, logger=None):
     if logger:
         logger("Done building from/ resources index.")
 
-    resource_iterator = to_resources.iterator(chunk_size=2000)
-    progress = LoopProgress(to_resources.count(), logger)
-    for to_resource in progress.iter(resource_iterator):
+    progress = LoopProgress(len(go_resources), logger)
+    for to_resource in progress.iter(go_resources):
         map_paths_resource(
             to_resource,
             from_resources,
